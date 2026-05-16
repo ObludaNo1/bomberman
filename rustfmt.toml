@@ -1,0 +1,28 @@
+# This enables nightly-only rustfmt configuration in this repository.
+unstable_features = true
+
+# Add your preferred nightly-only options below, for example:
+max_width = 100
+comment_width = 100
+wrap_comments = true
+condense_wildcard_suffixes = true
+fn_single_line = false
+format_code_in_doc_comments = true
+format_macro_matchers = true
+format_macro_bodies = true
+format_strings = true
+hex_literal_case = "Upper"
+float_literal_trailing_zero = "Always"
+imports_granularity = "Crate"
+imports_layout = "Mixed"
+indent_style = "Block"
+normalize_comments = true
+normalize_doc_attributes = true
+remove_nested_parens = true
+reorder_imports = true
+group_imports = "StdExternalCrate"
+reorder_modules = true
+short_array_element_width_threshold = 20
+single_line_if_else_max_width = 60
+single_line_let_else_max_width = 60
+use_field_init_shorthand = true
