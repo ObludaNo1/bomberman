@@ -1,6 +1,7 @@
 mod assets;
 mod camera;
 mod character;
+mod controls;
 mod map;
 mod position;
 mod util;
@@ -38,6 +39,7 @@ fn main() {
         .add_plugins(MainCameraPlugin)
         .add_plugins(util::CameraScalePlugin)
         .add_plugins(map::Map)
+        .add_plugins(controls::ControlsPlugin)
         .add_plugins(character::CharacterPlugin)
         .run();
 }
