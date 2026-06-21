@@ -1,6 +1,9 @@
 mod assets;
 mod camera;
+mod character;
 mod map;
+mod position;
+mod util;
 
 use bevy::{
     prelude::*,
@@ -33,6 +36,8 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(MainCameraPlugin)
+        .add_plugins(util::CameraScalePlugin)
         .add_plugins(map::Map)
+        .add_plugins(character::CharacterPlugin)
         .run();
 }

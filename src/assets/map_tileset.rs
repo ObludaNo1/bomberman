@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::tileset_enum;
+use crate::{
+    assets::{TILESET_TILE_SIZE, TilesetHandles},
+    tileset_enum,
+};
 
 tileset_enum!(
     MapTileType,
@@ -12,7 +15,6 @@ tileset_enum!(
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MapTileset {
     pub atlas_size: UVec2,
-    pub tile_size: UVec2,
     /// The position of the top-left corner of each sprite in the atlas, in pixels.
     sprites: [UVec2; MapTileType::COUNT],
 }
@@ -24,7 +26,7 @@ impl MapTileset {
 
     pub fn sprite_rect(&self, sprite_type: MapTileType) -> URect {
         let topleft = self.sprite_topleft_position(sprite_type);
-        URect::from_corners(topleft, topleft + self.tile_size)
+        URect::from_corners(topleft, topleft + TILESET_TILE_SIZE)
     }
 
     pub fn sprites_iter(&self) -> impl Iterator<Item = (MapTileType, URect)> {
@@ -36,6 +38,21 @@ impl MapTileset {
 
 pub const TILEMAP: MapTileset = MapTileset {
     atlas_size: UVec2::new(255, 434),
-    tile_size: UVec2::new(16, 16),
     sprites: SPRITES,
 };
+
+pub const TILEMAP_TEXTURE_PATH: &str = "BombermanGB2-tiles.png";
+
+pub fn prepare_tilemap_handles(
+    asset_server: &AssetServer,
+    atlas_layouts: &mut Assets<TextureAtlasLayout>,
+) -> TilesetHandles {
+    let image = asset_server.load::<Image>(TILEMAP_TEXTURE_PATH);
+    let mut layout = TextureAtlasLayout::new_empty(TILEMAP.atlas_size);
+    for (_tile_type, rect) in TILEMAP.sprites_iter() {
+        layout.add_texture(rect);
+    }
+    let layout = atlas_layouts.add(layout);
+
+    TilesetHandles { image, layout }
+}

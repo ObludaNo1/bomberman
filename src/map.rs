@@ -1,52 +1,28 @@
-use bevy::{
-    prelude::*,
-    window::{Monitor, PrimaryMonitor, PrimaryWindow, Window, WindowMode},
+use bevy::prelude::*;
+
+use crate::{
+    assets::{
+        TILESET_TILE_SIZE,
+        map_tileset::{MapTileType, prepare_tilemap_handles},
+    },
+    util::CameraScale,
 };
 
-use crate::assets::{
-    TILEMAP_TEXTURE_PATH,
-    map_tileset::{MapTileType, TILEMAP, prepare_tilemap_handles},
-};
-
-const MAP_WIDTH: i32 = 19;
-const MAP_HEIGHT: i32 = 15;
+pub const MAP_WIDTH: i32 = 19;
+pub const MAP_HEIGHT: i32 = 15;
 
 fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    monitor: Query<&Monitor, With<PrimaryMonitor>>,
+    camera_scale: Res<CameraScale>,
 ) {
-    let Ok(window) = windows.single() else {
-        return;
-    };
+    let tilemap_handles = prepare_tilemap_handles(&asset_server, &mut atlas_layouts);
 
-    let (target_width, target_height) = match window.mode {
-        WindowMode::Fullscreen(..) | WindowMode::BorderlessFullscreen(_) => {
-            if let Ok(monitor) = monitor.single() {
-                (
-                    monitor.physical_width as f32,
-                    monitor.physical_height as f32,
-                )
-            } else {
-                (window.width(), window.height())
-            }
-        }
-        WindowMode::Windowed => (window.width(), window.height()),
-    };
+    let scale = camera_scale.0;
 
-    let tilemap_handles =
-        prepare_tilemap_handles(&asset_server, &mut atlas_layouts, TILEMAP_TEXTURE_PATH);
-
-    let tile_width = TILEMAP.tile_size.x as f32;
-    let tile_height = TILEMAP.tile_size.y as f32;
-
-    let map_width_px = MAP_WIDTH as f32 * tile_width;
-    let map_height_px = MAP_HEIGHT as f32 * tile_height;
-    let scale = (target_width / map_width_px).min(target_height / map_height_px);
-    let scaled_tile_width = (tile_width * scale).floor();
-    let scaled_tile_height = (tile_height * scale).floor();
+    let scaled_tile_width = (TILESET_TILE_SIZE.x as f32 * scale).floor();
+    let scaled_tile_height = (TILESET_TILE_SIZE.y as f32 * scale).floor();
 
     let start_x = -((MAP_WIDTH as f32 - 1.0) * scaled_tile_width) * 0.5;
     let start_y = -((MAP_HEIGHT as f32 - 1.0) * scaled_tile_height) * 0.5;
