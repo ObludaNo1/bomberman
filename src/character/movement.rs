@@ -15,6 +15,10 @@ impl MovementDirection {
     pub fn as_f32(&self) -> f32 {
         self.0 as f32
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
 }
 
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -45,7 +49,14 @@ pub fn move_character(
             0
         });
 
-        world_position.x += movement.horizontal.as_f32() * CHARACTER_SPEED * elapsed;
-        world_position.y += movement.vertical.as_f32() * CHARACTER_SPEED * elapsed;
+        let direction = if movement.horizontal.is_zero() && movement.vertical.is_zero() {
+            Vec2::ZERO
+        } else {
+            Vec2::new(movement.horizontal.as_f32(), movement.vertical.as_f32()).normalize()
+                * CHARACTER_SPEED
+                * elapsed
+        };
+        world_position.x += direction.x;
+        world_position.y += direction.y;
     }
 }
