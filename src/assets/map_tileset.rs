@@ -1,54 +1,9 @@
 use bevy::prelude::*;
 
-macro_rules! map_tiles {
-    ($($variant:ident => $x:expr, $y:expr),* $(,)?) => {
-        map_tiles!(@build_enum [] [] ; $($variant),*);
+use crate::tileset_enum;
 
-        impl MapTileType {
-            const COUNT: usize = map_tiles!(@count $($variant),*);
-
-            const VARIANTS: [Self; Self::COUNT] = [
-                $(
-                    Self::$variant,
-                )*
-            ];
-
-            pub const fn index(self) -> usize {
-                self as usize
-            }
-        }
-
-        const SPRITES: [UVec2; MapTileType::COUNT] = [
-            $(
-                UVec2::new($x, $y),
-            )*
-        ];
-    };
-
-    (@build_enum [$($variants:tt)*] [$($seen:ident),*] ; $head:ident, $($tail:ident),+) => {
-        map_tiles!(@build_enum [
-            $($variants)*
-            $head = map_tiles!(@count $($seen),*),
-        ] [$($seen,)* $head] ; $($tail),+);
-    };
-
-    (@build_enum [$($variants:tt)*] [$($seen:ident),*] ; $last:ident) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-        #[repr(usize)]
-        pub enum MapTileType {
-            $($variants)*
-            $last = map_tiles!(@count $($seen),*),
-        }
-    };
-
-    (@count $($variant:ident),*) => {
-        <[()]>::len(&[$(map_tiles!(@sub $variant)),*])
-    };
-
-    (@sub $variant:ident) => { () };
-}
-
-map_tiles!(
+tileset_enum!(
+    MapTileType,
     Floor => 86, 417,
     Wall => 1, 417,
     IndestructibleWall => 120, 417,
