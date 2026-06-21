@@ -32,4 +32,4 @@ strip = "debuginfo"
 
 
 [dependencies]
-bevy = { version = "0.18.0", features = ["dynamic_linking"] }
+bevy = { version = "0.18.0", features = ["dynamic_linking", "gif"] }
