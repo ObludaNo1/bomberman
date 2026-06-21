@@ -5,6 +5,7 @@ use crate::{
         TILESET_TILE_SIZE,
         character_tileset::{CharacterTileType, prepare_character_tileset_handles},
     },
+    character::movement::CharacterMovement,
     position::WorldPosition,
     util::CameraScale,
 };
@@ -39,5 +40,6 @@ pub fn spawn_character(
             1.0,
         )
         .with_scale(Vec3::splat(scale)),
+        CharacterMovement::default(),
     ));
 }
