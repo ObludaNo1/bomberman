@@ -4,9 +4,8 @@ use bevy::{
 };
 
 use crate::assets::{
-    TILEMAP_TEXTURE_PATH, TilemapHandles,
-    map_tileset::{MapTileType, TILEMAP},
-    prepare_tilemap_handles,
+    TILEMAP_TEXTURE_PATH,
+    map_tileset::{MapTileType, TILEMAP, prepare_tilemap_handles},
 };
 
 const MAP_WIDTH: i32 = 19;
@@ -37,7 +36,7 @@ fn setup_map(
         WindowMode::Windowed => (window.width(), window.height()),
     };
 
-    let tilemap_handles: TilemapHandles =
+    let tilemap_handles =
         prepare_tilemap_handles(&asset_server, &mut atlas_layouts, TILEMAP_TEXTURE_PATH);
 
     let tile_width = TILEMAP.tile_size.x as f32;
