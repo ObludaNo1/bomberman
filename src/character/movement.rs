@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    assets::TILESET_TILE_SIZE, character::spawn::Character, controls::Controls,
-    position::WorldPosition, util::CameraScale,
-};
+use crate::{character::spawn::Character, controls::Controls, position::WorldPosition};
 
 pub const CHARACTER_SPEED: f32 = 2.0;
 
@@ -27,14 +24,12 @@ pub struct CharacterMovement {
 }
 
 pub fn move_character(
-    mut query: Query<(&mut Transform, &mut WorldPosition, &mut CharacterMovement), With<Character>>,
+    mut query: Query<(&mut WorldPosition, &mut CharacterMovement), With<Character>>,
     controls: Res<Controls>,
     time: Res<Time>,
-    scale: Res<CameraScale>,
 ) {
-    let scale = scale.0;
     let elapsed = time.delta_secs();
-    for (mut transform, mut world_position, mut movement) in query.iter_mut() {
+    for (mut world_position, mut movement) in query.iter_mut() {
         movement.vertical = MovementDirection::new(if controls.up {
             1
         } else if controls.down {
@@ -52,12 +47,5 @@ pub fn move_character(
 
         world_position.x += movement.horizontal.as_f32() * CHARACTER_SPEED * elapsed;
         world_position.y += movement.vertical.as_f32() * CHARACTER_SPEED * elapsed;
-
-        *transform = Transform::from_xyz(
-            world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
-            world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
-            1.0,
-        )
-        .with_scale(Vec3::splat(scale));
     }
 }

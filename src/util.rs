@@ -8,6 +8,7 @@ use bevy::{
 use crate::{
     assets::TILESET_TILE_SIZE,
     map::{MAP_HEIGHT, MAP_WIDTH},
+    position::WorldPosition,
 };
 
 #[derive(Resource, Deref, DerefMut)]
@@ -76,11 +77,28 @@ fn recompute_scale_on_window_change(
     commands.insert_resource(CameraScale(scale));
 }
 
+pub fn update_transformations(
+    mut query: Query<(&mut Transform, &WorldPosition)>,
+    scale: Res<CameraScale>,
+) {
+    let scale = scale.0;
+    for (mut transform, world_position) in query.iter_mut() {
+        *transform = Transform::from_xyz(
+            world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
+            world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
+            transform.translation.z,
+        )
+        .with_scale(Vec3::splat(scale));
+    }
+}
+
 pub struct CameraScalePlugin;
 
 impl Plugin for CameraScalePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, compute_scale)
-            .add_systems(Update, recompute_scale_on_window_change);
+        app.add_systems(PreStartup, compute_scale).add_systems(
+            Update,
+            (recompute_scale_on_window_change, update_transformations).chain(),
+        );
     }
 }
