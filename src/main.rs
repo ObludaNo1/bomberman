@@ -1,4 +1,6 @@
+mod assets;
 mod camera;
+mod map;
 
 use bevy::{
     prelude::*,
@@ -31,5 +33,6 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(MainCameraPlugin)
+        .add_plugins(map::Map)
         .run();
 }
