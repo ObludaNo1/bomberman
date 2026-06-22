@@ -2,12 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     assets::character_tileset::{CharacterTileType, prepare_character_tileset_handles},
-    character::movement::CharacterMovement,
     position::WorldPosition,
+    world_entities::Character,
 };
-
-#[derive(Component)]
-pub struct Character;
 
 pub fn spawn_character(
     mut commands: Commands,
@@ -29,6 +26,5 @@ pub fn spawn_character(
             },
         ),
         Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-        CharacterMovement::default(),
     ));
 }

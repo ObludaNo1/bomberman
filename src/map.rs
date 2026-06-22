@@ -3,10 +3,50 @@ use bevy::prelude::*;
 use crate::{
     assets::map_tileset::{MapTileType, prepare_tilemap_handles},
     position::WorldPosition,
+    world_entities::MapTileMarker,
 };
 
 pub const MAP_WIDTH: i32 = 19;
 pub const MAP_HEIGHT: i32 = 15;
+
+#[derive(Resource, Debug, Clone, PartialEq, Eq)]
+pub struct CollisionMap {
+    tiles: Vec<MapTileMarker>,
+}
+
+impl CollisionMap {
+    pub fn width(&self) -> i32 {
+        MAP_WIDTH
+    }
+
+    pub fn height(&self) -> i32 {
+        MAP_HEIGHT
+    }
+
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<CollisionMapTile> {
+        if x >= self.width() as usize || y >= self.height() as usize {
+            return None;
+        }
+        let index = y * self.width() as usize + x;
+        self.tiles
+            .get(index)
+            .copied()
+            .map(|marker| CollisionMapTile { x, y, marker })
+    }
+
+    pub fn get_tile_at_position(&self, position: &WorldPosition) -> Option<CollisionMapTile> {
+        let x = (position.x.round() + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
+        let y = (position.y.round() + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
+        self.get_tile(x, y)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CollisionMapTile {
+    pub x: usize,
+    pub y: usize,
+    pub marker: MapTileMarker,
+}
 
 fn setup_map(
     mut commands: Commands,
@@ -18,6 +58,8 @@ fn setup_map(
     let floor_index = MapTileType::Floor.index();
     let indestructible_wall_index = MapTileType::IndestructibleWall.index();
 
+    let mut map_tile_markers = Vec::new();
+
     for y in 0..MAP_HEIGHT {
         for x in 0..MAP_WIDTH {
             let is_indestructible_wall = x == 0
@@ -25,6 +67,12 @@ fn setup_map(
                 || y == 0
                 || y == MAP_HEIGHT - 1
                 || (x % 2 == 0 && y % 2 == 0);
+
+            map_tile_markers.push(if is_indestructible_wall {
+                MapTileMarker::Obstacle
+            } else {
+                MapTileMarker::Walkable
+            });
 
             commands.spawn((
                 Sprite::from_atlas_image(
@@ -46,6 +94,10 @@ fn setup_map(
             ));
         }
     }
+
+    commands.insert_resource(CollisionMap {
+        tiles: map_tile_markers,
+    });
 }
 
 pub struct Map;

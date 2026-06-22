@@ -1,19 +1,67 @@
 use bevy::prelude::*;
 
-#[derive(Resource, Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Direction {
+    pub fn horizontal_movement(&self) -> f32 {
+        match self {
+            Direction::Left => -1.0,
+            Direction::Right => 1.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn vertical_movement(&self) -> f32 {
+        match self {
+            Direction::Up => 1.0,
+            Direction::Down => -1.0,
+            _ => 0.0,
+        }
+    }
+}
+
+#[derive(Resource, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Controls {
-    pub up: bool,
-    pub down: bool,
-    pub left: bool,
-    pub right: bool,
+    movement_directions: Vec<Direction>,
     pub place_bomb: bool,
 }
 
+impl Default for Controls {
+    fn default() -> Self {
+        Self {
+            movement_directions: Vec::with_capacity(4),
+            place_bomb: false,
+        }
+    }
+}
+
+impl Controls {
+    fn update_direction(&mut self, direction: Direction, is_pressed: bool) {
+        if is_pressed {
+            if !self.movement_directions.contains(&direction) {
+                self.movement_directions.push(direction);
+            }
+        } else {
+            self.movement_directions.retain(|&d| d != direction);
+        }
+    }
+
+    pub fn into_movement(&self) -> Option<Direction> {
+        self.movement_directions.last().copied()
+    }
+}
+
 fn map_controls_input(keyboard_input: Res<ButtonInput<KeyCode>>, mut controls: ResMut<Controls>) {
-    controls.up = keyboard_input.pressed(KeyCode::KeyW);
-    controls.down = keyboard_input.pressed(KeyCode::KeyS);
-    controls.left = keyboard_input.pressed(KeyCode::KeyA);
-    controls.right = keyboard_input.pressed(KeyCode::KeyD);
+    controls.update_direction(Direction::Up, keyboard_input.pressed(KeyCode::KeyW));
+    controls.update_direction(Direction::Down, keyboard_input.pressed(KeyCode::KeyS));
+    controls.update_direction(Direction::Left, keyboard_input.pressed(KeyCode::KeyA));
+    controls.update_direction(Direction::Right, keyboard_input.pressed(KeyCode::KeyD));
     controls.place_bomb = keyboard_input.just_pressed(KeyCode::Space);
 }
 

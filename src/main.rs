@@ -5,6 +5,7 @@ mod controls;
 mod map;
 mod position;
 mod util;
+mod world_entities;
 
 use bevy::{
     prelude::*,
