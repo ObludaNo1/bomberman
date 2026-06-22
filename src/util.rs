@@ -97,7 +97,7 @@ pub struct CameraScalePlugin;
 impl Plugin for CameraScalePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, compute_scale).add_systems(
-            Update,
+            PostUpdate,
             (recompute_scale_on_window_change, update_transformations).chain(),
         );
     }

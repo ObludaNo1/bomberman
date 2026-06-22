@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{
-        TILESET_TILE_SIZE,
-        map_tileset::{MapTileType, prepare_tilemap_handles},
-    },
-    util::CameraScale,
+    assets::map_tileset::{MapTileType, prepare_tilemap_handles},
+    position::WorldPosition,
 };
 
 pub const MAP_WIDTH: i32 = 19;
@@ -15,17 +12,8 @@ fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    camera_scale: Res<CameraScale>,
 ) {
     let tilemap_handles = prepare_tilemap_handles(&asset_server, &mut atlas_layouts);
-
-    let scale = camera_scale.0;
-
-    let scaled_tile_width = (TILESET_TILE_SIZE.x as f32 * scale).floor();
-    let scaled_tile_height = (TILESET_TILE_SIZE.y as f32 * scale).floor();
-
-    let start_x = -((MAP_WIDTH as f32 - 1.0) * scaled_tile_width) * 0.5;
-    let start_y = -((MAP_HEIGHT as f32 - 1.0) * scaled_tile_height) * 0.5;
 
     let floor_index = MapTileType::Floor.index();
     let indestructible_wall_index = MapTileType::IndestructibleWall.index();
@@ -50,12 +38,11 @@ fn setup_map(
                         },
                     },
                 ),
-                Transform::from_xyz(
-                    start_x + x as f32 * scaled_tile_width,
-                    start_y + y as f32 * scaled_tile_height,
-                    0.0,
-                )
-                .with_scale(Vec3::splat(scale)),
+                WorldPosition(Vec2 {
+                    x: x as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
+                    y: y as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,
+                }),
+                Transform::from_xyz(0.0, 0.0, 0.0),
             ));
         }
     }
