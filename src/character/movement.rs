@@ -3,6 +3,7 @@ use std::ops::Mul;
 use bevy::prelude::*;
 
 use crate::{
+    character::MovementDirection,
     controls::{Controls, Direction},
     map::CollisionMap,
     position::WorldPosition,
@@ -14,8 +15,27 @@ const BORDER_PASSING: f32 = 0.6666;
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
 
+fn get_direction(direction: Vec2) -> Option<Direction> {
+    if direction.x.abs() > direction.y.abs() {
+        if direction.x > 0.0 {
+            Some(Direction::Right)
+        } else {
+            Some(Direction::Left)
+        }
+    } else if direction.y.abs() > direction.x.abs() {
+        if direction.y > 0.0 {
+            Some(Direction::Up)
+        } else {
+            Some(Direction::Down)
+        }
+    } else {
+        None
+    }
+}
+
 fn move_in_step(
     character_position: &mut WorldPosition,
+    movement_dir: &mut MovementDirection,
     direction: Direction,
     delta_secs: f32,
     collision_map: &CollisionMap,
@@ -93,6 +113,7 @@ fn move_in_step(
         // If both tiles are walkable, we can move freely.
         if cv_tile.marker == MapTileMarker::Walkable && ccv_tile.marker == MapTileMarker::Walkable {
             character_position.0 += move_dir * step_distance;
+            movement_dir.0 = Some(direction);
         } else if cv_tile.marker == MapTileMarker::Walkable
             && ccv_tile.marker == MapTileMarker::Obstacle
             && ((cv_tile.world_pos().0 - character_position.0).mul(cv_dir)).length()
@@ -104,8 +125,10 @@ fn move_in_step(
             if needed_perpendicular_distance < step_distance {
                 character_position.0 += needed_perpendicular_direction;
                 character_position.0 += move_dir * (step_distance - needed_perpendicular_distance);
+                movement_dir.0 = Some(direction);
             } else {
                 character_position.0 += needed_perpendicular_direction.normalize() * step_distance;
+                movement_dir.0 = get_direction(needed_perpendicular_direction);
             }
         } else if ccv_tile.marker == MapTileMarker::Walkable
             && cv_tile.marker == MapTileMarker::Obstacle
@@ -118,32 +141,40 @@ fn move_in_step(
             if needed_perpendicular_distance < step_distance {
                 character_position.0 += needed_perpendicular_direction;
                 character_position.0 += move_dir * (step_distance - needed_perpendicular_distance);
+                movement_dir.0 = Some(direction);
             } else {
                 character_position.0 += needed_perpendicular_direction.normalize() * step_distance;
+                movement_dir.0 = get_direction(needed_perpendicular_direction);
             }
         } else {
-            // Character is block by wall. Do nothing for now.
+            // Character is block by wall. Do not move him.
+            movement_dir.0 = None;
         }
     } else {
         // If one of the tiles is None, it means we are at the edge of the map, so we can
         // move freely
         character_position.0 += move_dir * step_distance;
+        movement_dir.0 = Some(direction);
     }
 }
 
 pub fn move_character(
-    mut characters: Query<&mut WorldPosition, With<Character>>,
+    mut characters: Query<(&mut WorldPosition, &mut MovementDirection), With<Character>>,
     controls: Res<Controls>,
     time: Res<Time>,
     collision_map: Res<CollisionMap>,
 ) {
     let elapsed = time.delta_secs();
 
-    for mut world_position in characters.iter_mut() {
+    for (mut world_position, mut movement_dir) in characters.iter_mut() {
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {
-            move_in_step(&mut world_position, direction, elapsed, &collision_map);
+            move_in_step(
+                &mut world_position, &mut movement_dir, direction, elapsed, &collision_map,
+            );
+        } else {
+            movement_dir.0 = None;
         }
     }
 }

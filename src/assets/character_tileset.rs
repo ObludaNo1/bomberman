@@ -8,6 +8,7 @@ use crate::{
 tileset_enum!(
     CharacterTileType,
     Standing => 1, 84,
+    Moving => 18, 84,
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
