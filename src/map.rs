@@ -35,8 +35,8 @@ impl CollisionMap {
     }
 
     pub fn get_tile_at_position(&self, position: &WorldPosition) -> Option<CollisionMapTile> {
-        let x = (position.x.round() + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
-        let y = (position.y.round() + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
+        let x = (position.x + 0.5 + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
+        let y = (position.y + 0.5 + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
         self.get_tile(x, y)
     }
 }
@@ -46,6 +46,16 @@ pub struct CollisionMapTile {
     pub x: usize,
     pub y: usize,
     pub marker: MapTileMarker,
+}
+
+impl CollisionMapTile {
+    pub fn world_pos(&self) -> WorldPosition {
+        Vec2::new(
+            self.x as f32 - (MAP_WIDTH - 1) as f32 * 0.5,
+            self.y as f32 - (MAP_HEIGHT - 1) as f32 * 0.5,
+        )
+        .into()
+    }
 }
 
 fn setup_map(
