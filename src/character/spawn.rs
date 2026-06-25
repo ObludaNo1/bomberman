@@ -23,7 +23,7 @@ pub fn spawn_character(
             character_tileset_handles.image.clone(),
             TextureAtlas {
                 layout: character_tileset_handles.layout.clone(),
-                index: CharacterTileType::Standing.index(),
+                index: CharacterTileType::StandingDown.index(),
             },
         ),
         Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),

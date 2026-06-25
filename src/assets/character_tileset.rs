@@ -7,8 +7,13 @@ use crate::{
 
 tileset_enum!(
     CharacterTileType,
-    Standing => 1, 84,
-    Moving => 18, 84,
+    StandingDown => 1, 84,
+    MovingDown => 18, 84,
+    StandingUp => 35, 84,
+    MovingUp => 52, 84,
+    MovingRight1 => 69, 84,
+    StandingRight => 86, 84,
+    MovingRight2 => 103, 84,
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -36,7 +41,7 @@ impl CharacterTileset {
 }
 
 pub const CHARACTER_TILESET: CharacterTileset = CharacterTileset {
-    atlas_size: UVec2::new(255, 434),
+    atlas_size: UVec2::new(222, 205),
     sprites: SPRITES,
 };
 
