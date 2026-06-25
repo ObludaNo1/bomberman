@@ -1,4 +1,5 @@
 mod assets;
+mod bomb;
 mod camera;
 mod character;
 mod controls;
@@ -42,5 +43,6 @@ fn main() {
         .add_plugins(map::Map)
         .add_plugins(controls::ControlsPlugin)
         .add_plugins(character::CharacterPlugin)
+        .add_plugins(bomb::BombPlugin)
         .run();
 }

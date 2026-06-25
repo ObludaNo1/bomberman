@@ -8,3 +8,6 @@ pub enum MapTileMarker {
     Obstacle,
     Walkable,
 }
+
+#[derive(Component)]
+pub struct Bomb;

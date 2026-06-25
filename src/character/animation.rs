@@ -105,14 +105,14 @@ fn get_animation_frames_for_direction(
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct AnimationController {
+pub struct CharacterAnimationController {
     timer: Timer,
     current_animation_frames: &'static [CharacterRenderFrame; ANIMATION_FRAME_COUNT],
     current_frame_index: usize,
     last_moving: MovementDirection,
 }
 
-impl Default for AnimationController {
+impl Default for CharacterAnimationController {
     fn default() -> Self {
         Self {
             timer: Timer::from_seconds(ANIMATION_FRAME_DURATION, TimerMode::Repeating),
@@ -123,7 +123,7 @@ impl Default for AnimationController {
     }
 }
 
-impl AnimationController {
+impl CharacterAnimationController {
     pub fn update(&mut self, delta_time: Duration, direction: MovementDirection) {
         if let Some(direction) = direction.0 {
             if self.last_moving.is_none() {
@@ -154,7 +154,14 @@ impl AnimationController {
 }
 
 pub fn animate_character(
-    mut query: Query<(&mut AnimationController, &mut Sprite, &MovementDirection), With<Character>>,
+    mut query: Query<
+        (
+            &mut CharacterAnimationController,
+            &mut Sprite,
+            &MovementDirection,
+        ),
+        With<Character>,
+    >,
     time: Res<Time>,
 ) {
     let delta_time = time.delta();

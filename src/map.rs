@@ -39,6 +39,16 @@ impl CollisionMap {
         let y = (position.y + 0.5 + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
         self.get_tile(x, y)
     }
+
+    pub fn set_tile(&mut self, x: usize, y: usize, marker: MapTileMarker) {
+        if x >= self.width() as usize || y >= self.height() as usize {
+            return;
+        }
+        let index = y * self.width() as usize + x;
+        if let Some(tile) = self.tiles.get_mut(index) {
+            *tile = marker;
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

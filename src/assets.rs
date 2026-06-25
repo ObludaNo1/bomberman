@@ -1,3 +1,4 @@
+pub mod bomb_tileset;
 pub mod character_tileset;
 pub mod map_tileset;
 mod tileset_enum;

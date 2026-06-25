@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     assets::character_tileset::{CharacterTileType, prepare_character_tileset_handles},
-    character::{MovementDirection, animation::AnimationController},
+    character::{MovementDirection, animation::CharacterAnimationController},
     position::WorldPosition,
     world_entities::Character,
 };
@@ -26,8 +26,8 @@ pub fn spawn_character(
                 index: CharacterTileType::StandingDown.index(),
             },
         ),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-        AnimationController::default(),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
+        CharacterAnimationController::default(),
         MovementDirection(None),
     ));
 }
