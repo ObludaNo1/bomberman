@@ -12,6 +12,7 @@ use crate::{
 
 pub const CHARACTER_SPEED: f32 = 2.0;
 const BORDER_PASSING: f32 = 0.6666;
+const BOMB_WALKING_DISTANCE: f32 = 0.75;
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
 
@@ -118,7 +119,9 @@ fn move_in_step(
                 // If both tiles are obstacles or character is not eligible for sliding, we check
                 // whether the character is on one of those tiles. If true he can freely walk on top
                 // of that tile. This is the case for placed bomb.
-                let character_tile = collision_map.get_tile_at_position(character_position);
+                let character_tile = collision_map.get_tile_at_position(
+                    &(character_position.0 + move_dir * (BOMB_WALKING_DISTANCE - 0.5)).into(),
+                );
                 if let Some(character_tile) = character_tile
                     && (character_tile == cv_tile || character_tile == ccv_tile)
                 {
