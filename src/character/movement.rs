@@ -65,52 +65,69 @@ fn move_in_step(
 
     // Next both of those tiles are Some. Otherwise we are out of map - undefined behaviour.
     if let (Some(cv_tile), Some(ccv_tile)) = (cv_tile, ccv_tile) {
-        // If both tiles are walkable, we can move freely.
         if cv_tile.marker == MapTileMarker::Walkable && ccv_tile.marker == MapTileMarker::Walkable {
+            // If both tiles are walkable, we can move freely.
             character_position.0 += move_dir * step_distance;
             movement_dir.0 = Some(direction);
-        } else if cv_tile.marker == MapTileMarker::Walkable
-            && ccv_tile.marker == MapTileMarker::Obstacle
-            && ((cv_tile.world_pos().0 - character_position.0).mul(cv_dir)).length()
-                < BORDER_PASSING
-        {
-            let needed_perpendicular_direction =
-                (character_position.0 - cv_tile.world_pos().0).mul(-cv_dir.abs());
-            let needed_perpendicular_distance = needed_perpendicular_direction.length();
-            if needed_perpendicular_distance < step_distance {
-                character_position.0 += needed_perpendicular_direction;
-                character_position.0 += move_dir * (step_distance - needed_perpendicular_distance);
-                movement_dir.0 = Some(direction);
-            } else {
-                character_position.0 += needed_perpendicular_direction.normalize() * step_distance;
-                movement_dir.0 = get_direction(needed_perpendicular_direction);
-            }
-        } else if ccv_tile.marker == MapTileMarker::Walkable
-            && cv_tile.marker == MapTileMarker::Obstacle
-            && ((ccv_tile.world_pos().0 - character_position.0).mul(-cv_dir)).length()
-                < BORDER_PASSING
-        {
-            let needed_perpendicular_direction =
-                (ccv_tile.world_pos().0 - character_position.0).mul(cv_dir.abs());
-            let needed_perpendicular_distance = needed_perpendicular_direction.length();
-            if needed_perpendicular_distance < step_distance {
-                character_position.0 += needed_perpendicular_direction;
-                character_position.0 += move_dir * (step_distance - needed_perpendicular_distance);
-                movement_dir.0 = Some(direction);
-            } else {
-                character_position.0 += needed_perpendicular_direction.normalize() * step_distance;
-                movement_dir.0 = get_direction(needed_perpendicular_direction);
-            }
         } else {
-            let character_tile = collision_map.get_tile_at_position(character_position);
-            if let Some(character_tile) = character_tile
-                && (character_tile == cv_tile || character_tile == ccv_tile)
-            {
-                character_position.0 += move_dir * step_distance;
-                movement_dir.0 = Some(direction);
+            // Now we have to solve multiple cases. Now we solve if the character position qualifies
+            // for sliding along the wall to fit into the walkable tile. And also a case where the
+            // character is standing on top of an obstacle (placed bomb) and can still move on top
+            // of it until he leaves its tile.
+            if let Some((perp_dir_to_walkable, perp_dist_to_walkable, cv_dir_sign)) = {
+                // Check if the character is eligible for sliding along the wall.
+                if cv_tile.marker == MapTileMarker::Obstacle
+                    && ccv_tile.marker == MapTileMarker::Obstacle
+                {
+                    // Both tiles are obstacles - no sliding.
+                    None
+                } else {
+                    let (walkable, cv_dir_sign) = if cv_tile.marker == MapTileMarker::Walkable {
+                        (&cv_tile, 1.0)
+                    } else {
+                        (&ccv_tile, -1.0)
+                    };
+                    // Compute the perpendicular distance to the walkable tile - multiplying with
+                    // perpendicular unit vector eliminates the component in the directions of the
+                    // movement, leaving only the perpendicular component.
+                    let perp_dir_to_walkable =
+                        (walkable.world_pos().0 - character_position.0).mul(cv_dir.abs());
+                    let perp_dist_to_walkable = perp_dir_to_walkable.length();
+                    if perp_dist_to_walkable < BORDER_PASSING {
+                        // The character is close enough to slide along the wall.
+                        Some((perp_dir_to_walkable, perp_dist_to_walkable, cv_dir_sign))
+                    } else {
+                        // The character is too far from the walkable tile to slide along the wall.
+                        None
+                    }
+                }
+            } {
+                // In this branch we know that the character is eligible for sliding along the wall.
+                if perp_dist_to_walkable < step_distance {
+                    // Slide the character along the wall until it is aligned with the walkable tile
+                    character_position.0 += perp_dir_to_walkable;
+                    // Move the character for the rest of the step distance in the desired direction
+                    character_position.0 += move_dir * (step_distance - perp_dist_to_walkable);
+                    movement_dir.0 = Some(direction);
+                } else {
+                    // Character has to slide along the wall for the whole step distance.
+                    character_position.0 += cv_dir * cv_dir_sign * step_distance;
+                    movement_dir.0 = get_direction(perp_dir_to_walkable);
+                }
             } else {
-                // Character is block by wall. Do not move him.
-                movement_dir.0 = None;
+                // If both tiles are obstacles or character is not eligible for sliding, we check
+                // whether the character is on one of those tiles. If true he can freely walk on top
+                // of that tile. This is the case for placed bomb.
+                let character_tile = collision_map.get_tile_at_position(character_position);
+                if let Some(character_tile) = character_tile
+                    && (character_tile == cv_tile || character_tile == ccv_tile)
+                {
+                    character_position.0 += move_dir * step_distance;
+                    movement_dir.0 = Some(direction);
+                } else {
+                    // Character is block by wall. Do not move him.
+                    movement_dir.0 = None;
+                }
             }
         }
     } else {
