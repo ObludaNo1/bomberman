@@ -11,8 +11,11 @@ use crate::{
 };
 
 pub const CHARACTER_SPEED: f32 = 2.0;
+const MAX_STEP_DISTANCE: f32 = 1.0 / 64.0;
 const BORDER_PASSING: f32 = 0.6666;
 const BOMB_WALKING_DISTANCE: f32 = 0.75;
+
+const MAX_DELTA_TIME: f32 = MAX_STEP_DISTANCE / CHARACTER_SPEED;
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
 
@@ -146,15 +149,20 @@ pub fn move_character(
     time: Res<Time>,
     collision_map: Res<CollisionMap>,
 ) {
-    let elapsed = time.delta_secs();
+    let delta_time = time.delta_secs();
 
     for (mut world_position, mut animation_dir) in characters.iter_mut() {
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {
-            move_in_step(
-                &mut world_position, &mut animation_dir, direction, elapsed, &collision_map,
-            );
+            let mut elapsed = 0.0;
+            while elapsed < delta_time {
+                let step = (delta_time - elapsed).min(MAX_DELTA_TIME);
+                elapsed += step;
+                move_in_step(
+                    &mut world_position, &mut animation_dir, direction, step, &collision_map,
+                );
+            }
         } else {
             animation_dir.0 = None;
         }
