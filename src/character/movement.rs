@@ -36,7 +36,7 @@ fn get_direction(direction: Vec2) -> Option<Direction> {
 
 fn move_in_step(
     character_position: &mut WorldPosition,
-    movement_dir: &mut MovementDirection,
+    animation_dir: &mut MovementDirection,
     direction: Direction,
     delta_secs: f32,
     collision_map: &CollisionMap,
@@ -64,12 +64,15 @@ fn move_in_step(
     let ccv_tile =
         collision_map.get_tile_at_position(&(tile_move_dir_offset - tile_perp_dir_offset).into());
 
+    // The default animation direction is the direction of movement. It only changes when the
+    // character is sliding along the wall.
+    animation_dir.0 = Some(direction);
+
     // Next both of those tiles are Some. Otherwise we are out of map - undefined behaviour.
     if let (Some(cv_tile), Some(ccv_tile)) = (cv_tile, ccv_tile) {
         if cv_tile.marker == MapTileMarker::Walkable && ccv_tile.marker == MapTileMarker::Walkable {
             // If both tiles are walkable, we can move freely.
             character_position.0 += move_dir * step_distance;
-            movement_dir.0 = Some(direction);
         } else {
             // Now we have to solve multiple cases. Now we solve if the character position qualifies
             // for sliding along the wall to fit into the walkable tile. And also a case where the
@@ -109,11 +112,10 @@ fn move_in_step(
                     character_position.0 += perp_dir_to_walkable;
                     // Move the character for the rest of the step distance in the desired direction
                     character_position.0 += move_dir * (step_distance - perp_dist_to_walkable);
-                    movement_dir.0 = Some(direction);
                 } else {
                     // Character has to slide along the wall for the whole step distance.
                     character_position.0 += cv_dir * cv_dir_sign * step_distance;
-                    movement_dir.0 = get_direction(perp_dir_to_walkable);
+                    animation_dir.0 = get_direction(perp_dir_to_walkable);
                 }
             } else {
                 // If both tiles are obstacles or character is not eligible for sliding, we check
@@ -126,10 +128,8 @@ fn move_in_step(
                     && (character_tile == cv_tile || character_tile == ccv_tile)
                 {
                     character_position.0 += move_dir * step_distance;
-                    movement_dir.0 = Some(direction);
                 } else {
                     // Character is block by wall. Do not move him.
-                    movement_dir.0 = None;
                 }
             }
         }
@@ -137,7 +137,6 @@ fn move_in_step(
         // If one of the tiles is None, it means we are at the edge of the map, so we can
         // move freely
         character_position.0 += move_dir * step_distance;
-        movement_dir.0 = Some(direction);
     }
 }
 
@@ -149,15 +148,15 @@ pub fn move_character(
 ) {
     let elapsed = time.delta_secs();
 
-    for (mut world_position, mut movement_dir) in characters.iter_mut() {
+    for (mut world_position, mut animation_dir) in characters.iter_mut() {
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {
             move_in_step(
-                &mut world_position, &mut movement_dir, direction, elapsed, &collision_map,
+                &mut world_position, &mut animation_dir, direction, elapsed, &collision_map,
             );
         } else {
-            movement_dir.0 = None;
+            animation_dir.0 = None;
         }
     }
 }
