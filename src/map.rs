@@ -10,11 +10,11 @@ pub const MAP_WIDTH: i32 = 19;
 pub const MAP_HEIGHT: i32 = 15;
 
 #[derive(Resource, Debug, Clone, PartialEq, Eq)]
-pub struct CollisionMap {
+pub struct WorldMap {
     tiles: Vec<MapTileMarker>,
 }
 
-impl CollisionMap {
+impl WorldMap {
     pub fn width(&self) -> i32 {
         MAP_WIDTH
     }
@@ -89,9 +89,9 @@ fn setup_map(
                 || (x % 2 == 0 && y % 2 == 0);
 
             map_tile_markers.push(if is_indestructible_wall {
-                MapTileMarker::Obstacle
+                MapTileMarker::Wall
             } else {
-                MapTileMarker::Walkable
+                MapTileMarker::Empty
             });
 
             commands.spawn((
@@ -115,7 +115,7 @@ fn setup_map(
         }
     }
 
-    commands.insert_resource(CollisionMap {
+    commands.insert_resource(WorldMap {
         tiles: map_tile_markers,
     });
 }

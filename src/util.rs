@@ -83,12 +83,15 @@ pub fn update_transformations(
 ) {
     let scale = scale.0;
     for (mut transform, world_position) in query.iter_mut() {
-        *transform = Transform::from_xyz(
-            world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
-            world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
-            transform.translation.z,
-        )
-        .with_scale(Vec3::splat(scale));
+        *transform = Transform {
+            translation: Vec3::new(
+                world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
+                world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
+                transform.translation.z,
+            ),
+            scale: Vec3::splat(scale),
+            rotation: transform.rotation,
+        };
     }
 }
 

@@ -5,9 +5,9 @@ use bevy::prelude::*;
 use crate::{
     character::MovementDirection,
     controls::{Controls, Direction},
-    map::CollisionMap,
+    map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, MapTileMarker},
+    world_entities::Character,
 };
 
 pub const CHARACTER_SPEED: f32 = 2.0;
@@ -42,7 +42,7 @@ fn move_in_step(
     animation_dir: &mut MovementDirection,
     direction: Direction,
     delta_secs: f32,
-    collision_map: &CollisionMap,
+    collision_map: &WorldMap,
 ) {
     let step_distance = CHARACTER_SPEED * delta_secs;
     // There is a small trick. We check tile left of the character. The position is shifted by 0.5
@@ -73,7 +73,7 @@ fn move_in_step(
 
     // Next both of those tiles are Some. Otherwise we are out of map - undefined behaviour.
     if let (Some(cv_tile), Some(ccv_tile)) = (cv_tile, ccv_tile) {
-        if cv_tile.marker == MapTileMarker::Walkable && ccv_tile.marker == MapTileMarker::Walkable {
+        if cv_tile.marker.is_walkable() && ccv_tile.marker.is_walkable() {
             // If both tiles are walkable, we can move freely.
             character_position.0 += move_dir * step_distance;
         } else {
@@ -83,13 +83,11 @@ fn move_in_step(
             // of it until he leaves its tile.
             if let Some((perp_dir_to_walkable, perp_dist_to_walkable, cv_dir_sign)) = {
                 // Check if the character is eligible for sliding along the wall.
-                if cv_tile.marker == MapTileMarker::Obstacle
-                    && ccv_tile.marker == MapTileMarker::Obstacle
-                {
+                if cv_tile.marker.is_obstacle() && ccv_tile.marker.is_obstacle() {
                     // Both tiles are obstacles - no sliding.
                     None
                 } else {
-                    let (walkable, cv_dir_sign) = if cv_tile.marker == MapTileMarker::Walkable {
+                    let (walkable, cv_dir_sign) = if cv_tile.marker.is_walkable() {
                         (&cv_tile, 1.0)
                     } else {
                         (&ccv_tile, -1.0)
@@ -147,7 +145,7 @@ pub fn move_character(
     mut characters: Query<(&mut WorldPosition, &mut MovementDirection), With<Character>>,
     controls: Res<Controls>,
     time: Res<Time>,
-    collision_map: Res<CollisionMap>,
+    collision_map: Res<WorldMap>,
 ) {
     let delta_time = time.delta_secs();
 

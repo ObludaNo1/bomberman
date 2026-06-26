@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{TILESET_TILE_SIZE, TilesetHandles},
+    assets::{TILEMAP_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles},
     tileset_enum,
 };
 
@@ -40,8 +40,6 @@ pub const TILEMAP: MapTileset = MapTileset {
     atlas_size: UVec2::new(255, 434),
     sprites: SPRITES,
 };
-
-pub const TILEMAP_TEXTURE_PATH: &str = "BombermanGB2-tiles.png";
 
 pub fn prepare_tilemap_handles(
     asset_server: &AssetServer,

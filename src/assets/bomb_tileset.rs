@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{TILESET_TILE_SIZE, TilesetHandles},
+    assets::{ENEMIES_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles},
     tileset_enum,
 };
 
@@ -38,8 +38,6 @@ pub const BOMB_TILESET: BombTileset = BombTileset {
     atlas_size: UVec2::new(222, 324),
     sprites: SPRITES,
 };
-
-pub const ENEMIES_TEXTURE_PATH: &str = "BombermanGB2-enemies.gif";
 
 pub fn prepare_bomb_tileset_handles(
     asset_server: &AssetServer,

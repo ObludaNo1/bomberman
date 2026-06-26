@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{TILESET_TILE_SIZE, TilesetHandles},
+    assets::{CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles},
     tileset_enum,
 };
 
@@ -44,8 +44,6 @@ pub const CHARACTER_TILESET: CharacterTileset = CharacterTileset {
     atlas_size: UVec2::new(222, 205),
     sprites: SPRITES,
 };
-
-pub const CHARACTER_TEXTURE_PATH: &str = "BombermanGB2-Bomberman.gif";
 
 pub fn prepare_character_tileset_handles(
     asset_server: &AssetServer,
