@@ -8,24 +8,6 @@ pub enum Direction {
     Right,
 }
 
-impl Direction {
-    pub fn horizontal_movement(&self) -> f32 {
-        match self {
-            Direction::Left => -1.0,
-            Direction::Right => 1.0,
-            _ => 0.0,
-        }
-    }
-
-    pub fn vertical_movement(&self) -> f32 {
-        match self {
-            Direction::Up => 1.0,
-            Direction::Down => -1.0,
-            _ => 0.0,
-        }
-    }
-}
-
 #[derive(Resource, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Controls {
     movement_directions: Vec<Direction>,

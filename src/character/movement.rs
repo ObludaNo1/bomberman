@@ -40,73 +40,28 @@ fn move_in_step(
     delta_secs: f32,
     collision_map: &CollisionMap,
 ) {
-    let check_position: WorldPosition = Vec2::new(
-        character_position.x + direction.horizontal_movement(),
-        character_position.y + direction.vertical_movement(),
-    )
-    .into();
-
     let step_distance = CHARACTER_SPEED * delta_secs;
-
-    let (cv_tile, ccv_tile, move_dir) = match direction {
-        Direction::Left => {
-            // There is a small trick. We check tile left of the character. The position is
-            // shifted by 0.5 to account for character size. Then we also need to check slightly
-            // behind that tile - `step_distance` is added to check against the tile we are
-            // moving into. Then it is multiplied by 1.5 to ensure that moving character by
-            // `step_distance` will never result in character being stuck in wall due to
-            // rounding errors.
-            let x_position_to_check = character_position.x - 0.5 - step_distance * 1.5;
-            (
-                collision_map.get_tile_at_position(
-                    &Vec2::new(x_position_to_check, check_position.y + 0.5).into(),
-                ),
-                collision_map.get_tile_at_position(
-                    &Vec2::new(x_position_to_check, check_position.y - 0.5).into(),
-                ),
-                Vec2::new(-1.0, 0.0),
-            )
-        }
-        Direction::Up => {
-            let y_position_to_check = character_position.y + 0.5 + step_distance * 1.5;
-            (
-                collision_map.get_tile_at_position(
-                    &Vec2::new(check_position.x + 0.5, y_position_to_check).into(),
-                ),
-                collision_map.get_tile_at_position(
-                    &Vec2::new(check_position.x - 0.5, y_position_to_check).into(),
-                ),
-                Vec2::new(0.0, 1.0),
-            )
-        }
-        Direction::Right => {
-            let x_position_to_check = character_position.x + 0.5 + step_distance * 1.5;
-            (
-                collision_map.get_tile_at_position(
-                    &Vec2::new(x_position_to_check, check_position.y - 0.5).into(),
-                ),
-                collision_map.get_tile_at_position(
-                    &Vec2::new(x_position_to_check, check_position.y + 0.5).into(),
-                ),
-                Vec2::new(1.0, 0.0),
-            )
-        }
-        Direction::Down => {
-            let y_position_to_check = character_position.y - 0.5 - step_distance * 1.5;
-            (
-                collision_map.get_tile_at_position(
-                    &Vec2::new(check_position.x - 0.5, y_position_to_check).into(),
-                ),
-                collision_map.get_tile_at_position(
-                    &Vec2::new(check_position.x + 0.5, y_position_to_check).into(),
-                ),
-                Vec2::new(0.0, -1.0),
-            )
-        }
+    // There is a small trick. We check tile left of the character. The position is shifted by 0.5
+    // to account for character size. Then we also need to check slightly behind that tile -
+    // `step_distance` is added to check against the tile we are moving into. Then it is multiplied
+    // by 1.5 to ensure that moving character by `step_distance` will never result in character
+    // being stuck in wall due to rounding errors.
+    let offset_distance = 0.5 + step_distance * 1.5;
+    let move_dir = match direction {
+        Direction::Left => Vec2::new(-1.0, 0.0),
+        Direction::Up => Vec2::new(0.0, 1.0),
+        Direction::Right => Vec2::new(1.0, 0.0),
+        Direction::Down => Vec2::new(0.0, -1.0),
     };
-
     let cv_dir = CV_ROTATION_MATRIX * move_dir;
-    let ccv_dir = -(CV_ROTATION_MATRIX * move_dir);
+
+    let tile_move_dir_offset = character_position.0 + move_dir * offset_distance;
+    let tile_perp_dir_offset = cv_dir * 0.5;
+
+    let cv_tile =
+        collision_map.get_tile_at_position(&(tile_move_dir_offset + tile_perp_dir_offset).into());
+    let ccv_tile =
+        collision_map.get_tile_at_position(&(tile_move_dir_offset - tile_perp_dir_offset).into());
 
     // Next both of those tiles are Some. Otherwise we are out of map - undefined behaviour.
     if let (Some(cv_tile), Some(ccv_tile)) = (cv_tile, ccv_tile) {
@@ -132,7 +87,7 @@ fn move_in_step(
             }
         } else if ccv_tile.marker == MapTileMarker::Walkable
             && cv_tile.marker == MapTileMarker::Obstacle
-            && ((ccv_tile.world_pos().0 - character_position.0).mul(ccv_dir)).length()
+            && ((ccv_tile.world_pos().0 - character_position.0).mul(-cv_dir)).length()
                 < BORDER_PASSING
         {
             let needed_perpendicular_direction =
