@@ -147,8 +147,16 @@ fn move_in_step(
                 movement_dir.0 = get_direction(needed_perpendicular_direction);
             }
         } else {
-            // Character is block by wall. Do not move him.
-            movement_dir.0 = None;
+            let character_tile = collision_map.get_tile_at_position(character_position);
+            if let Some(character_tile) = character_tile
+                && (character_tile == cv_tile || character_tile == ccv_tile)
+            {
+                character_position.0 += move_dir * step_distance;
+                movement_dir.0 = Some(direction);
+            } else {
+                // Character is block by wall. Do not move him.
+                movement_dir.0 = None;
+            }
         }
     } else {
         // If one of the tiles is None, it means we are at the edge of the map, so we can
