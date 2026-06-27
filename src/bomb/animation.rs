@@ -48,6 +48,30 @@ impl ExplosionAnimationVariant {
     }
 }
 
+fn get_asset_variant(
+    anim_var: ExplosionAnimationVariant,
+    dir_var: ExplosionTileVariant,
+) -> BombExplosionTileType {
+    use BombExplosionTileType as TT;
+    use ExplosionAnimationVariant as AV;
+    use ExplosionPathType as PT;
+
+    match (anim_var, dir_var.kind) {
+        (AV::V1, PT::Center) => TT::ExplosionCenter1,
+        (AV::V2, PT::Center) => TT::ExplosionCenter2,
+        (AV::V3, PT::Center) => TT::ExplosionCenter3,
+        (AV::V4, PT::Center) => TT::ExplosionCenter4,
+        (AV::V1, PT::Straight) => TT::ExplosionStraight1,
+        (AV::V2, PT::Straight) => TT::ExplosionStraight2,
+        (AV::V3, PT::Straight) => TT::ExplosionStraight3,
+        (AV::V4, PT::Straight) => TT::ExplosionStraight4,
+        (AV::V1, PT::End) => TT::ExplosionEnd1,
+        (AV::V2, PT::End) => TT::ExplosionEnd2,
+        (AV::V3, PT::End) => TT::ExplosionEnd3,
+        (AV::V4, PT::End) => TT::ExplosionEnd4,
+    }
+}
+
 pub fn animate_explosion(
     mut query: Query<
         (
@@ -68,97 +92,7 @@ pub fn animate_explosion(
 
         let anim_var = ExplosionAnimationVariant::from_tick(&timing);
 
-        use BombExplosionTileType as TT;
-        use ExplosionAnimationVariant as AV;
-        use ExplosionOrientation as EO;
-        use ExplosionPathType as PT;
-        use ExplosionTileVariant as TV;
-        let asset = match (anim_var, dir_var) {
-            (
-                AV::V1,
-                TV {
-                    kind: PT::Center,
-                    orientation: _,
-                },
-            ) => TT::ExplosionCenter1,
-            (
-                AV::V2,
-                TV {
-                    kind: PT::Center,
-                    orientation: _,
-                },
-            ) => TT::ExplosionCenter2,
-            (
-                AV::V3,
-                TV {
-                    kind: PT::Center,
-                    orientation: _,
-                },
-            ) => TT::ExplosionCenter3,
-            (
-                AV::V4,
-                TV {
-                    kind: PT::Center,
-                    orientation: _,
-                },
-            ) => TT::ExplosionCenter4,
-            (
-                AV::V1,
-                TV {
-                    kind: PT::Straight,
-                    orientation: _,
-                },
-            ) => TT::ExplosionStraight1,
-            (
-                AV::V2,
-                TV {
-                    kind: PT::Straight,
-                    orientation: _,
-                },
-            ) => TT::ExplosionStraight2,
-            (
-                AV::V3,
-                TV {
-                    kind: PT::Straight,
-                    orientation: _,
-                },
-            ) => TT::ExplosionStraight3,
-            (
-                AV::V4,
-                TV {
-                    kind: PT::Straight,
-                    orientation: _,
-                },
-            ) => TT::ExplosionStraight4,
-            (
-                AV::V1,
-                TV {
-                    kind: PT::End,
-                    orientation: _,
-                },
-            ) => TT::ExplosionEnd1,
-            (
-                AV::V2,
-                TV {
-                    kind: PT::End,
-                    orientation: _,
-                },
-            ) => TT::ExplosionEnd2,
-            (
-                AV::V3,
-                TV {
-                    kind: PT::End,
-                    orientation: _,
-                },
-            ) => TT::ExplosionEnd3,
-            (
-                AV::V4,
-                TV {
-                    kind: PT::End,
-                    orientation: _,
-                },
-            ) => TT::ExplosionEnd4,
-        };
+        let asset = get_asset_variant(anim_var, *dir_var);
         *sprite = Sprite::from_atlas_image(
             bomb_assets.bomb_explosion_handles.image.clone(),
             TextureAtlas {
@@ -168,10 +102,10 @@ pub fn animate_explosion(
         );
 
         let angle = match dir_var.orientation {
-            EO::Up => 0.0,
-            EO::Left => FRAC_PI_2,
-            EO::Down => PI,
-            EO::Right => 3.0 * FRAC_PI_2,
+            ExplosionOrientation::Up => 0.0,
+            ExplosionOrientation::Left => FRAC_PI_2,
+            ExplosionOrientation::Down => PI,
+            ExplosionOrientation::Right => 3.0 * FRAC_PI_2,
         };
         *transform = Transform {
             translation: transform.translation,
