@@ -1,6 +1,9 @@
 use bevy::{prelude::*, sprite_render::Material2dPlugin};
 
-use crate::assets::{TILESET_TILE_SIZE, material::ColouringMaterial};
+use crate::assets::{
+    TILESET_TILE_SIZE,
+    material::{ColouringMaterial, ExplosionMaterial},
+};
 
 #[derive(Resource, Debug)]
 pub struct MeshHandle(pub Handle<Mesh>);
@@ -19,6 +22,7 @@ impl Plugin for RenderingPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MeshHandle(Handle::default()))
             .add_plugins(Material2dPlugin::<ColouringMaterial>::default())
+            .add_plugins(Material2dPlugin::<ExplosionMaterial>::default())
             .add_systems(PreStartup, add_rendering_mesh);
     }
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{TILEMAP_TEXTURE_PATH, TILESET_TILE_SIZE},
+    assets::{TILEMAP_TEXTURE_PATH, TILESET_TILE_SIZE, material::ColouringMaterial},
     tileset_enum,
 };
 
@@ -14,6 +14,7 @@ tileset_enum!(
     TILESET_TILE_SIZE,
     (255, 434),
     TILEMAP_TEXTURE_PATH,
+    ColouringMaterial,
     Color::srgba(C1, C1, C1, 1.0),
     Color::srgba(C2, C2, C2, 1.0),
     Color::srgba(C3, C3, C3, 1.0),

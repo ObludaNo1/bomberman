@@ -4,6 +4,7 @@
 /// - $tile_size: The size of each tile in the tileset.
 /// - ($size_x, $size_y): The size of the texture atlas in pixels.
 /// - $texture_path: The path to the texture atlas image.
+/// - $material: The material type to use for the tileset.
 /// - $colour_1, $colour_2, $colour_3, $colour_4: The four mapped colours for the material.
 /// - $variant => ($x, $y): Each variant of the enum and its corresponding top-left corner position
 ///   in the texture atlas, in pixels.
@@ -11,6 +12,7 @@
 macro_rules! tileset_enum {
     ($enum_name:ident, $tile_size:expr, ($size_x:expr, $size_y:expr),
     $texture_path:expr,
+    $material:path,
     $colour_1:expr, $colour_2:expr, $colour_3:expr, $colour_4:expr,
     $($variant:ident => ($x:expr, $y:expr)),* $(,)?) => {
         paste::paste! {
@@ -52,10 +54,10 @@ macro_rules! tileset_enum {
                 ],
             };
 
-            pub fn prepare_tilemap_handles(
+            pub fn prepare_tilemap_material(
                 asset_server: &bevy::asset::AssetServer,
-                colouring_material: &mut bevy::asset::Assets<$crate::assets::material::ColouringMaterial>,
-            ) -> $crate::assets::TilesetHandles {
+                material: &mut bevy::asset::Assets<$material>,
+            ) -> $crate::assets::TilesetHandles<$material> {
 
                 let image = asset_server.load_with_settings::<
                     bevy::image::Image,
@@ -65,7 +67,7 @@ macro_rules! tileset_enum {
                     |settings| { settings.is_srgb = false; },
                 );
 
-                let colouring = colouring_material.add($crate::assets::material::ColouringMaterial::new(
+                let material = material.add($material ::new(
                     image,
                     bevy::math::UVec2::new($size_x, $size_y),
                     $colour_1,
@@ -74,9 +76,7 @@ macro_rules! tileset_enum {
                     $colour_4,
                 ));
 
-                $crate::assets::TilesetHandles {
-                    colouring,
-                }
+                $crate::assets::TilesetHandles (material)
             }
         }
 

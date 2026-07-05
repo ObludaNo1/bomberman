@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE},
+    assets::{CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, material::ExplosionMaterial},
     tileset_enum,
 };
 
@@ -10,6 +10,7 @@ tileset_enum!(
     TILESET_TILE_SIZE,
     (222, 205),
     CHARACTER_TEXTURE_PATH,
+    ExplosionMaterial,
     Color::srgba(0.9, 0.2, 0.05, 1.0),
     Color::srgba(0.9, 0.65, 0.05, 0.75),
     Color::srgba(0.9, 0.9, 0.05, 0.5),

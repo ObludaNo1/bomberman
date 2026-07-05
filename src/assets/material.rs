@@ -117,3 +117,101 @@ impl Material2d for ColouringMaterial {
         Ok(())
     }
 }
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct ExplosionMaterial {
+    #[texture(0)]
+    #[sampler(1)]
+    pub tileset_texture: Handle<Image>,
+
+    #[uniform(2)]
+    pub black_colour: LinearRgba,
+    #[uniform(3)]
+    pub dark_colour: LinearRgba,
+    #[uniform(4)]
+    pub light_colour: LinearRgba,
+    #[uniform(5)]
+    pub background_colour: LinearRgba,
+
+    // Per-frame atlas UV rectangle written by gameplay systems.
+    #[uniform(6)]
+    pub uv_min: Vec2,
+    #[uniform(7)]
+    pub uv_max: Vec2,
+    // Stored as f32 to avoid shader bool uniform layout pitfalls across backends.
+    #[uniform(8)]
+    pub flip_x: f32,
+
+    #[uniform(9)]
+    pub inset: Vec2,
+}
+
+impl ExplosionMaterial {
+    pub(super) fn new(
+        tileset_texture: Handle<Image>,
+        image_size: UVec2,
+        black_colour: Color,
+        dark_colour: Color,
+        light_colour: Color,
+        background_colour: Color,
+    ) -> Self {
+        Self {
+            tileset_texture,
+            inset: Vec2::new(0.75 / image_size.x as f32, 0.75 / image_size.y as f32),
+            black_colour: black_colour.to_linear(),
+            dark_colour: dark_colour.to_linear(),
+            light_colour: light_colour.to_linear(),
+            background_colour: background_colour.to_linear(),
+            uv_min: Vec2::ZERO,
+            uv_max: Vec2::ONE,
+            flip_x: 0.0,
+        }
+    }
+
+    pub fn set_uv_rect(&mut self, rect: Rect) {
+        self.uv_min = rect.min;
+        self.uv_max = rect.max;
+    }
+
+    pub fn set_flip_x(&mut self, flip_x: bool) {
+        self.flip_x = if flip_x { 1.0 } else { 0.0 };
+    }
+}
+
+impl Material2d for ExplosionMaterial {
+    fn fragment_shader() -> ShaderRef {
+        COLOURING_SHADER_PATH.into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode2d {
+        AlphaMode2d::Blend
+    }
+
+    fn specialize(
+        descriptor: &mut RenderPipelineDescriptor,
+        _layout: &MeshVertexBufferLayoutRef,
+        _key: Material2dKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        // Use a screen-style blend so overlaps brighten without washing the palette toward yellow.
+        if let Some(fragment) = &mut descriptor.fragment {
+            if let Some(target) = fragment.targets.first_mut() {
+                if let Some(target_state) = target.as_mut() {
+                    target_state.blend = Some(BlendState {
+                        color: BlendComponent {
+                            src_factor: BlendFactor::SrcAlpha,
+                            dst_factor: BlendFactor::OneMinusSrcAlpha,
+                            operation: BlendOperation::Add,
+                        },
+                        alpha: BlendComponent {
+                            src_factor: BlendFactor::SrcAlpha,
+                            dst_factor: BlendFactor::OneMinusSrcAlpha,
+                            operation: BlendOperation::Add,
+                        },
+                    });
+                    target_state.write_mask = ColorWrites::ALL;
+                }
+            }
+        }
+        Ok(())
+    }
+}

@@ -8,7 +8,7 @@ use crate::{
     assets::{
         TilesetHandles, bomb_explosion_tileset,
         bomb_tileset::{self, BombTileType},
-        material::ColouringMaterial,
+        material::{ColouringMaterial, ExplosionMaterial},
     },
     bomb::animation::{animate_bomb, animate_explosion},
     controls::Controls,
@@ -79,8 +79,7 @@ fn spawn_bomb_when_requested(
         return;
     }
 
-    let Some(mut bomb_material) = materials.get(&bomb_assets.bomb_handles.colouring).cloned()
-    else {
+    let Some(mut bomb_material) = materials.get(&bomb_assets.bomb_handles.0).cloned() else {
         return;
     };
     bomb_material.set_uv_rect(bomb_tileset::TILEMAP.sprite_uv_rect(BombTileType::Bomb));
@@ -209,7 +208,7 @@ fn get_explosion_tiles(
 fn explode_expired_bombs(
     mut commands: Commands,
     mut world_map: ResMut<WorldMap>,
-    mut materials: ResMut<Assets<ColouringMaterial>>,
+    mut explosion_materials: ResMut<Assets<ExplosionMaterial>>,
     mesh_handle: Res<MeshHandle>,
     bomb_assets: Res<BombAssets>,
     mut query: Query<(Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius), With<Bomb>>,
@@ -250,15 +249,15 @@ fn explode_expired_bombs(
         for (tile, variant) in explosions {
             world_map.set_tile(tile.x, tile.y, MapTileMarker::Explosion);
 
-            let Some(mut explosion_material) = materials
-                .get(&bomb_assets.bomb_explosion_handles.colouring)
+            let Some(mut explosion_material) = explosion_materials
+                .get(&bomb_assets.bomb_explosion_handles.0)
                 .cloned()
             else {
                 continue;
             };
             explosion_material.set_uv_rect(Rect::default());
             explosion_material.set_flip_x(false);
-            let explosion_material = materials.add(explosion_material);
+            let explosion_material = explosion_materials.add(explosion_material);
             commands.spawn((
                 Explosion,
                 tile.world_pos(),
@@ -300,23 +299,25 @@ fn remove_expired_explosions(
 
 #[derive(Resource)]
 struct BombAssets {
-    pub bomb_handles: TilesetHandles,
-    pub bomb_explosion_handles: TilesetHandles,
+    pub bomb_handles: TilesetHandles<ColouringMaterial>,
+    pub bomb_explosion_handles: TilesetHandles<ExplosionMaterial>,
 }
 
 fn prepare_bomb_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut material: ResMut<Assets<ColouringMaterial>>,
+    mut colouring_material: ResMut<Assets<ColouringMaterial>>,
+    mut explostion_material: ResMut<Assets<ExplosionMaterial>>,
 ) {
-    let bomb_handles = bomb_tileset::prepare_tilemap_handles(&asset_server, &mut material);
-    let Some(bomb_colouring) = material.get_mut(&bomb_handles.colouring) else {
+    let bomb_handles =
+        bomb_tileset::prepare_tilemap_material(&asset_server, &mut colouring_material);
+    let Some(bomb_colouring) = colouring_material.get_mut(&bomb_handles.0) else {
         return;
     };
     bomb_colouring.set_uv_rect(bomb_tileset::TILEMAP.sprite_uv_rect(BombTileType::Bomb));
 
     let bomb_explosion_handles =
-        bomb_explosion_tileset::prepare_tilemap_handles(&asset_server, &mut material);
+        bomb_explosion_tileset::prepare_tilemap_material(&asset_server, &mut explostion_material);
     commands.insert_resource(BombAssets {
         bomb_handles,
         bomb_explosion_handles,

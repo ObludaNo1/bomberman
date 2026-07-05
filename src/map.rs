@@ -81,10 +81,10 @@ fn setup_map(
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
-    let tilemap_handles = map_tileset::prepare_tilemap_handles(&asset_server, &mut material);
+    let tilemap_handles = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
     let mut map_tile_markers = Vec::new();
 
-    let Some(colouring_material) = material.get(&tilemap_handles.colouring) else {
+    let Some(colouring_material) = material.get(&tilemap_handles.0) else {
         return;
     };
 

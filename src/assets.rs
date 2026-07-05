@@ -5,9 +5,7 @@ pub mod map_tileset;
 pub mod material;
 mod tileset_enum;
 
-use bevy::prelude::*;
-
-use crate::assets::material::ColouringMaterial;
+use bevy::{prelude::*, sprite_render::Material2d};
 
 pub const TILESET_TILE_SIZE: UVec2 = UVec2::new(16, 16);
 
@@ -16,7 +14,5 @@ const ENEMIES_TEXTURE_PATH: &str = "BombermanGB2-enemies.gif";
 const TILEMAP_TEXTURE_PATH: &str = "BombermanGB2-tiles.png";
 const COLOURING_SHADER_PATH: &str = "colouring.wgsl";
 
-#[derive(Resource, Clone)]
-pub struct TilesetHandles {
-    pub colouring: Handle<ColouringMaterial>,
-}
+#[derive(Debug, Resource, Clone, Deref, DerefMut)]
+pub struct TilesetHandles<M: Material2d + Clone>(pub Handle<M>);

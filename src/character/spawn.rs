@@ -14,13 +14,12 @@ pub fn spawn_character(
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
-    let character_tileset_handles =
-        character_tileset::prepare_tilemap_handles(&asset_server, &mut material);
+    let character_tileset_material =
+        character_tileset::prepare_tilemap_material(&asset_server, &mut material);
 
     // Clone the shared template so this character can mutate uv_min/uv_max/flip_x without affecting
     // other entities.
-    let Some(character_material) = material.get(&character_tileset_handles.colouring).cloned()
-    else {
+    let Some(character_material) = material.get(&character_tileset_material.0).cloned() else {
         return;
     };
     let character_material = material.add(character_material);

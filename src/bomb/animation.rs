@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     assets::{
         bomb_explosion_tileset::{self, BombExplosionTileType},
-        material::ColouringMaterial,
+        material::ExplosionMaterial,
     },
     bomb::{BombTiming, ExplosionOrientation, ExplosionPathType, ExplosionTileVariant},
     util::RenderScale,
@@ -76,12 +76,12 @@ pub fn animate_explosion(
         (
             &BombTiming,
             &ExplosionTileVariant,
-            &MeshMaterial2d<ColouringMaterial>,
+            &MeshMaterial2d<ExplosionMaterial>,
             &mut Transform,
         ),
         With<Explosion>,
     >,
-    mut materials: ResMut<Assets<ColouringMaterial>>,
+    mut materials: ResMut<Assets<ExplosionMaterial>>,
 ) {
     for (timing, dir_var, material_handle, mut transform) in query.iter_mut() {
         let anim_var = ExplosionAnimationVariant::from_tick(&timing);
