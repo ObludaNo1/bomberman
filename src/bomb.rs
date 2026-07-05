@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 mod animation;
 
@@ -151,8 +151,12 @@ fn get_explosion_tiles(
     world_map: &WorldMap,
     bomb_position: &WorldPosition,
     explosion_radius: u32,
-) -> Vec<(CollisionMapTile, ExplosionTileVariant)> {
+) -> (
+    Vec<(CollisionMapTile, ExplosionTileVariant)>,
+    Vec<CollisionMapTile>,
+) {
     let mut explosion_tiles = Vec::new();
+    let mut chained_bombs = Vec::new();
 
     if let Some(center_tile) = world_map.get_tile_at_position(bomb_position) {
         explosion_tiles.push((
@@ -169,21 +173,28 @@ fn get_explosion_tiles(
                 let offset = dir_vec * i as f32;
                 let tile_pos = bomb_position.0 + offset;
                 if let Some(tile) = world_map.get_tile_at_position(&tile_pos.into()) {
-                    if tile.marker.is_walkable() {
-                        let variant = if i == explosion_radius {
-                            ExplosionPathType::End
-                        } else {
-                            ExplosionPathType::Straight
-                        };
-                        explosion_tiles.push((
-                            tile,
-                            ExplosionTileVariant {
-                                kind: variant,
-                                orientation: *dir,
-                            },
-                        ));
-                    } else {
-                        break;
+                    match tile.marker {
+                        MapTileMarker::Empty | MapTileMarker::Explosion => {
+                            let variant = if i == explosion_radius {
+                                ExplosionPathType::End
+                            } else {
+                                ExplosionPathType::Straight
+                            };
+                            explosion_tiles.push((
+                                tile,
+                                ExplosionTileVariant {
+                                    kind: variant,
+                                    orientation: *dir,
+                                },
+                            ));
+                        }
+                        MapTileMarker::Bomb => {
+                            chained_bombs.push(tile);
+                            break;
+                        }
+                        MapTileMarker::Wall => {
+                            break;
+                        }
                     }
                 } else {
                     break;
@@ -192,7 +203,7 @@ fn get_explosion_tiles(
         }
     }
 
-    explosion_tiles
+    (explosion_tiles, chained_bombs)
 }
 
 fn explode_expired_bombs(
@@ -205,31 +216,65 @@ fn explode_expired_bombs(
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
-    for (entity, position, mut bomb_timing, explosion_radius) in query.iter_mut() {
-        bomb_timing.update(delta_time);
-        if bomb_timing.is_finished() {
-            commands.entity(entity).despawn();
-            for (tile, variant) in get_explosion_tiles(&world_map, position, explosion_radius.0) {
-                let Some(mut explosion_material) = materials
-                    .get(&bomb_assets.bomb_explosion_handles.colouring)
-                    .cloned()
-                else {
-                    continue;
-                };
-                explosion_material.set_uv_rect(Rect::default());
-                explosion_material.set_flip_x(false);
-                let explosion_material = materials.add(explosion_material);
 
-                commands.spawn((
-                    Explosion,
-                    tile.world_pos(),
-                    Mesh2d(mesh_handle.0.clone()),
-                    MeshMaterial2d(explosion_material),
-                    Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-                    BombTiming::new(EXPLOSION_TICKS, EXPLOSION_TICK_DURATION),
-                    variant,
-                ));
-                world_map.set_tile(tile.x, tile.y, MapTileMarker::Explosion);
+    for (_, _, mut bomb_timing, _) in query.iter_mut() {
+        bomb_timing.update(delta_time);
+    }
+
+    let query = query.as_readonly();
+
+    // Hold all bombs in a map for quick lookup
+    let mut bombs_map = HashMap::new();
+    // Hold all bombs that explode this tick
+    let mut bombs_to_explode_vec = Vec::new();
+    for (entity, world_pos, bomb_timing, explosion_radius) in query {
+        // Collect all bombs since they may chain-explode
+        bombs_map.insert(
+            world_map.get_position_from_world(world_pos),
+            (entity, world_pos, explosion_radius),
+        );
+        if bomb_timing.is_finished() {
+            // Collect all bombs that explode this tick
+            bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
+        }
+    }
+
+    let mut i = 0;
+    while let Some((entity, world_pos, explosion_radius)) = bombs_to_explode_vec.get(i) {
+        i += 1;
+
+        commands.entity(*entity).despawn();
+        let (explosions, bombs_to_explode) =
+            get_explosion_tiles(&world_map, world_pos, explosion_radius.0);
+
+        for (tile, variant) in explosions {
+            world_map.set_tile(tile.x, tile.y, MapTileMarker::Explosion);
+
+            let Some(mut explosion_material) = materials
+                .get(&bomb_assets.bomb_explosion_handles.colouring)
+                .cloned()
+            else {
+                continue;
+            };
+            explosion_material.set_uv_rect(Rect::default());
+            explosion_material.set_flip_x(false);
+            let explosion_material = materials.add(explosion_material);
+            commands.spawn((
+                Explosion,
+                tile.world_pos(),
+                Mesh2d(mesh_handle.0.clone()),
+                MeshMaterial2d(explosion_material),
+                Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+                BombTiming::new(EXPLOSION_TICKS, EXPLOSION_TICK_DURATION),
+                variant,
+            ));
+        }
+
+        for bomb_to_explode in bombs_to_explode {
+            if let Some((entity, world_pos, explosion_radius)) =
+                bombs_map.remove(&(bomb_to_explode.x, bomb_to_explode.y))
+            {
+                bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
             }
         }
     }

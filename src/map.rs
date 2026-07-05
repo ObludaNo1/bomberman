@@ -41,6 +41,12 @@ impl WorldMap {
         self.get_tile(x, y)
     }
 
+    pub fn get_position_from_world(&self, position: &WorldPosition) -> (usize, usize) {
+        let x = (position.x + 0.5 + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
+        let y = (position.y + 0.5 + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
+        (x, y)
+    }
+
     pub fn set_tile(&mut self, x: usize, y: usize, marker: MapTileMarker) {
         if x >= self.width() as usize || y >= self.height() as usize {
             return;
