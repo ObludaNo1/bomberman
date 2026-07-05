@@ -9,6 +9,7 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(6) var<uniform> uv_min: vec2<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(7) var<uniform> uv_max: vec2<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(8) var<uniform> flip_x: f32;
+@group(#{MATERIAL_BIND_GROUP}) @binding(9) var<uniform> inset: vec2<f32>;
 
 const BLACK_COLOUR: f32 = 0.0 / 255.0;
 const DARK_COLOUR: f32 = 96.0 / 255.0;
@@ -27,7 +28,11 @@ fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
         uv.x = 1.0 - uv.x;
     }
     let atlas_uv = uv_min + uv * (uv_max - uv_min);
-    let texture_r = textureSample(tileset_texture, tileset_texture_sampler, atlas_uv).r;
+    // Clamp the UV coordinates to avoid sampling outside the intended area of the texture. We can
+    // have a pixel which lies with less than 50% of its area inside the rasterized triangle and its
+    // UV coordinates will be outside of usable range.
+    let safe_uv = clamp(atlas_uv, uv_min + inset, uv_max - inset);
+    let texture_r = textureSample(tileset_texture, tileset_texture_sampler, safe_uv).r;
 
     if (texture_r <= BLACK_THRESHOLD) {
         return colour_1;

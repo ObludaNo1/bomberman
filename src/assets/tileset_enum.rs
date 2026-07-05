@@ -67,6 +67,7 @@ macro_rules! tileset_enum {
 
                 let colouring = colouring_material.add($crate::assets::material::ColouringMaterial::new(
                     image,
+                    bevy::math::UVec2::new($size_x, $size_y),
                     $colour_1,
                     $colour_2,
                     $colour_3,

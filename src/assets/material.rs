@@ -43,11 +43,15 @@ pub struct ColouringMaterial {
     // Stored as f32 to avoid shader bool uniform layout pitfalls across backends.
     #[uniform(8)]
     pub flip_x: f32,
+
+    #[uniform(9)]
+    pub inset: Vec2,
 }
 
 impl ColouringMaterial {
-    pub fn new(
+    pub(super) fn new(
         tileset_texture: Handle<Image>,
+        image_size: UVec2,
         black_colour: Color,
         dark_colour: Color,
         light_colour: Color,
@@ -55,6 +59,7 @@ impl ColouringMaterial {
     ) -> Self {
         Self {
             tileset_texture,
+            inset: Vec2::new(0.75 / image_size.x as f32, 0.75 / image_size.y as f32),
             black_colour: black_colour.to_linear(),
             dark_colour: dark_colour.to_linear(),
             light_colour: light_colour.to_linear(),
