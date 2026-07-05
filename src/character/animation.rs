@@ -3,8 +3,13 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use crate::{
-    assets::character_tileset::CharacterTileType, character::MovementDirection,
-    controls::Direction, world_entities::Character,
+    assets::{
+        character_tileset::{self, CharacterTileType},
+        material::ColouringMaterial,
+    },
+    character::MovementDirection,
+    controls::Direction,
+    world_entities::Character,
 };
 
 const ANIMATION_FRAME_DURATION: f32 = 0.1;
@@ -157,20 +162,24 @@ pub fn animate_character(
     mut query: Query<
         (
             &mut CharacterAnimationController,
-            &mut Sprite,
             &MovementDirection,
+            &MeshMaterial2d<ColouringMaterial>,
         ),
         With<Character>,
     >,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
-    for (mut animation_controller, mut sprite, movement_direction) in query.iter_mut() {
+    for (mut animation_controller, movement_direction, material_handle) in query.iter_mut() {
         animation_controller.update(delta_time, *movement_direction);
         let current_frame = animation_controller.current_frame();
-        if let Some(atlas) = &mut sprite.texture_atlas {
-            atlas.index = current_frame.tile as usize;
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            // Material2d carries per-frame UV/flip uniforms, so animation only updates
+            // the current atlas rect and mirror flag.
+
+            material.set_uv_rect(character_tileset::TILEMAP.sprite_uv_rect(current_frame.tile));
+            material.set_flip_x(current_frame.flip_x);
         }
-        sprite.flip_x = current_frame.flip_x;
     }
 }

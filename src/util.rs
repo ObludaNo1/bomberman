@@ -14,6 +14,9 @@ use crate::{
 #[derive(Resource, Deref, DerefMut)]
 pub struct CameraScale(pub f32);
 
+#[derive(Component, Deref, DerefMut)]
+pub struct RenderScale(pub f32);
+
 fn calculate_scale(window: &Window, monitor: Option<&Monitor>) -> f32 {
     let (target_width, target_height) = match window.mode {
         WindowMode::Fullscreen(..) | WindowMode::BorderlessFullscreen(_) => {
@@ -78,18 +81,19 @@ fn recompute_scale_on_window_change(
 }
 
 pub fn update_transformations(
-    mut query: Query<(&mut Transform, &WorldPosition)>,
+    mut query: Query<(&mut Transform, &WorldPosition, Option<&RenderScale>)>,
     scale: Res<CameraScale>,
 ) {
     let scale = scale.0;
-    for (mut transform, world_position) in query.iter_mut() {
+    for (mut transform, world_position, render_scale) in query.iter_mut() {
+        let render_scale = render_scale.map(|rs| rs.0).unwrap_or(1.0);
         *transform = Transform {
             translation: Vec3::new(
                 world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
                 world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
                 transform.translation.z,
             ),
-            scale: Vec3::splat(scale),
+            scale: Vec3::splat(scale * render_scale),
             rotation: transform.rotation,
         };
     }

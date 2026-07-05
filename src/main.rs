@@ -5,6 +5,7 @@ mod character;
 mod controls;
 mod map;
 mod position;
+mod rendering;
 mod util;
 mod world_entities;
 
@@ -39,6 +40,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(MainCameraPlugin)
+        .add_plugins(rendering::RenderingPlugin)
         .add_plugins(util::CameraScalePlugin)
         .add_plugins(map::Map)
         .add_plugins(controls::ControlsPlugin)

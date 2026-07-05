@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::map_tileset::{MapTileType, prepare_tilemap_handles},
+    assets::{map_tileset, material::ColouringMaterial},
     position::WorldPosition,
+    rendering::MeshHandle,
     world_entities::MapTileMarker,
 };
 
@@ -71,14 +72,26 @@ impl CollisionMapTile {
 fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut material: ResMut<Assets<ColouringMaterial>>,
+    mesh_handle: Res<MeshHandle>,
 ) {
-    let tilemap_handles = prepare_tilemap_handles(&asset_server, &mut atlas_layouts);
-
-    let floor_index = MapTileType::Floor.index();
-    let indestructible_wall_index = MapTileType::IndestructibleWall.index();
-
+    let tilemap_handles = map_tileset::prepare_tilemap_handles(&asset_server, &mut material);
     let mut map_tile_markers = Vec::new();
+
+    let Some(colouring_material) = material.get(&tilemap_handles.colouring) else {
+        return;
+    };
+
+    let mut wall_material = colouring_material.clone();
+    wall_material.set_uv_rect(
+        map_tileset::TILEMAP.sprite_uv_rect(map_tileset::MapTileType::IndestructibleWall),
+    );
+    let mut floor_material = colouring_material.clone();
+    floor_material
+        .set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(map_tileset::MapTileType::Floor));
+
+    let wall_material = material.add(wall_material);
+    let floor_material = material.add(floor_material);
 
     for y in 0..MAP_HEIGHT {
         for x in 0..MAP_WIDTH {
@@ -95,17 +108,12 @@ fn setup_map(
             });
 
             commands.spawn((
-                Sprite::from_atlas_image(
-                    tilemap_handles.image.clone(),
-                    TextureAtlas {
-                        layout: tilemap_handles.layout.clone(),
-                        index: if is_indestructible_wall {
-                            indestructible_wall_index
-                        } else {
-                            floor_index
-                        },
-                    },
-                ),
+                Mesh2d(mesh_handle.0.clone()),
+                MeshMaterial2d(if is_indestructible_wall {
+                    wall_material.clone()
+                } else {
+                    floor_material.clone()
+                }),
                 WorldPosition(Vec2 {
                     x: x as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
                     y: y as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,

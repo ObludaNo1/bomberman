@@ -6,14 +6,16 @@ mod animation;
 
 use crate::{
     assets::{
-        TilesetHandles,
-        bomb_explosion_tileset::prepare_bomb_explosion_tileset_handles,
-        bomb_tileset::{BombTileType, prepare_bomb_tileset_handles},
+        TilesetHandles, bomb_explosion_tileset,
+        bomb_tileset::{self, BombTileType},
+        material::ColouringMaterial,
     },
     bomb::animation::{animate_bomb, animate_explosion},
     controls::Controls,
     map::{CollisionMapTile, WorldMap},
     position::WorldPosition,
+    rendering::MeshHandle,
+    util::RenderScale,
     world_entities::{Bomb, Character, Explosion, MapTileMarker},
 };
 
@@ -70,10 +72,20 @@ fn spawn_bomb_when_requested(
     mut world_map: ResMut<WorldMap>,
     controls: Res<Controls>,
     bomb_assets: Res<BombAssets>,
+    mesh_handle: Res<MeshHandle>,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
 ) {
     if !controls.place_bomb {
         return;
     }
+
+    let Some(mut bomb_material) = materials.get(&bomb_assets.bomb_handles.colouring).cloned()
+    else {
+        return;
+    };
+    bomb_material.set_uv_rect(bomb_tileset::TILEMAP.sprite_uv_rect(BombTileType::Bomb));
+    bomb_material.set_flip_x(false);
+    let bomb_material = materials.add(bomb_material);
 
     for character_position in characters.iter() {
         if let Some(tile) = world_map.get_tile_at_position(character_position)
@@ -82,16 +94,12 @@ fn spawn_bomb_when_requested(
             commands.spawn((
                 Bomb,
                 tile.world_pos(),
-                Sprite::from_atlas_image(
-                    bomb_assets.bomb_handles.image.clone(),
-                    TextureAtlas {
-                        layout: bomb_assets.bomb_handles.layout.clone(),
-                        index: BombTileType::Bomb.index(),
-                    },
-                ),
+                Mesh2d(mesh_handle.0.clone()),
+                MeshMaterial2d(bomb_material.clone()),
                 Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
                 BombTiming::new(BOMB_TICKS, BOMB_TICK_DURATION),
                 ExplosionRadius::default(),
+                RenderScale(1.0),
             ));
             world_map.set_tile(tile.x, tile.y, MapTileMarker::Bomb);
         }
@@ -190,6 +198,9 @@ fn get_explosion_tiles(
 fn explode_expired_bombs(
     mut commands: Commands,
     mut world_map: ResMut<WorldMap>,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
+    mesh_handle: Res<MeshHandle>,
+    bomb_assets: Res<BombAssets>,
     mut query: Query<(Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius), With<Bomb>>,
     time: Res<Time>,
 ) {
@@ -199,10 +210,21 @@ fn explode_expired_bombs(
         if bomb_timing.is_finished() {
             commands.entity(entity).despawn();
             for (tile, variant) in get_explosion_tiles(&world_map, position, explosion_radius.0) {
+                let Some(mut explosion_material) = materials
+                    .get(&bomb_assets.bomb_explosion_handles.colouring)
+                    .cloned()
+                else {
+                    continue;
+                };
+                explosion_material.set_uv_rect(Rect::default());
+                explosion_material.set_flip_x(false);
+                let explosion_material = materials.add(explosion_material);
+
                 commands.spawn((
                     Explosion,
                     tile.world_pos(),
-                    Sprite::default(),
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(explosion_material),
                     Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
                     BombTiming::new(EXPLOSION_TICKS, EXPLOSION_TICK_DURATION),
                     variant,
@@ -240,11 +262,16 @@ struct BombAssets {
 fn prepare_bomb_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut material: ResMut<Assets<ColouringMaterial>>,
 ) {
-    let bomb_handles = prepare_bomb_tileset_handles(&asset_server, &mut atlas_layouts);
+    let bomb_handles = bomb_tileset::prepare_tilemap_handles(&asset_server, &mut material);
+    let Some(bomb_colouring) = material.get_mut(&bomb_handles.colouring) else {
+        return;
+    };
+    bomb_colouring.set_uv_rect(bomb_tileset::TILEMAP.sprite_uv_rect(BombTileType::Bomb));
+
     let bomb_explosion_handles =
-        prepare_bomb_explosion_tileset_handles(&asset_server, &mut atlas_layouts);
+        bomb_explosion_tileset::prepare_tilemap_handles(&asset_server, &mut material);
     commands.insert_resource(BombAssets {
         bomb_handles,
         bomb_explosion_handles,

@@ -3,13 +3,17 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use bevy::prelude::*;
 
 use crate::{
-    assets::{TILESET_TILE_SIZE, bomb_explosion_tileset::BombExplosionTileType},
-    bomb::{BombAssets, BombTiming, ExplosionOrientation, ExplosionPathType, ExplosionTileVariant},
+    assets::{
+        bomb_explosion_tileset::{self, BombExplosionTileType},
+        material::ColouringMaterial,
+    },
+    bomb::{BombTiming, ExplosionOrientation, ExplosionPathType, ExplosionTileVariant},
+    util::RenderScale,
     world_entities::{Bomb, Explosion},
 };
 
-pub fn animate_bomb(mut query: Query<(&BombTiming, &mut Sprite), With<Bomb>>) {
-    for (bomb_timing, mut sprite) in query.iter_mut() {
+pub fn animate_bomb(mut query: Query<(&BombTiming, &mut RenderScale), With<Bomb>>) {
+    for (bomb_timing, mut render_scale) in query.iter_mut() {
         let scale: f32 = if bomb_timing.is_on_final_tick() {
             1.1
         } else if bomb_timing.ticks % 2 == 0 {
@@ -17,12 +21,7 @@ pub fn animate_bomb(mut query: Query<(&BombTiming, &mut Sprite), With<Bomb>>) {
         } else {
             0.9
         };
-        let scale = Vec2::new(
-            TILESET_TILE_SIZE.x as f32 * scale,
-            TILESET_TILE_SIZE.x as f32 * scale,
-        );
-
-        sprite.custom_size = Some(scale);
+        render_scale.0 = scale;
     }
 }
 
@@ -77,29 +76,26 @@ pub fn animate_explosion(
         (
             &mut BombTiming,
             &ExplosionTileVariant,
-            &mut Sprite,
+            &MeshMaterial2d<ColouringMaterial>,
             &mut Transform,
         ),
         With<Explosion>,
     >,
-    bomb_assets: Res<BombAssets>,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
 
-    for (mut timing, dir_var, mut sprite, mut transform) in query.iter_mut() {
+    for (mut timing, dir_var, material_handle, mut transform) in query.iter_mut() {
         timing.update(delta_time);
 
         let anim_var = ExplosionAnimationVariant::from_tick(&timing);
 
-        let asset = get_asset_variant(anim_var, *dir_var);
-        *sprite = Sprite::from_atlas_image(
-            bomb_assets.bomb_explosion_handles.image.clone(),
-            TextureAtlas {
-                layout: bomb_assets.bomb_explosion_handles.layout.clone(),
-                index: asset.index(),
-            },
-        );
+        let explosion_type = get_asset_variant(anim_var, *dir_var);
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            material.set_uv_rect(bomb_explosion_tileset::TILEMAP.sprite_uv_rect(explosion_type));
+            material.set_flip_x(false);
+        }
 
         let angle = match dir_var.orientation {
             ExplosionOrientation::Up => 0.0,
