@@ -74,7 +74,7 @@ fn get_asset_variant(
 pub fn animate_explosion(
     mut query: Query<
         (
-            &mut BombTiming,
+            &BombTiming,
             &ExplosionTileVariant,
             &MeshMaterial2d<ColouringMaterial>,
             &mut Transform,
@@ -82,13 +82,8 @@ pub fn animate_explosion(
         With<Explosion>,
     >,
     mut materials: ResMut<Assets<ColouringMaterial>>,
-    time: Res<Time>,
 ) {
-    let delta_time = time.delta();
-
-    for (mut timing, dir_var, material_handle, mut transform) in query.iter_mut() {
-        timing.update(delta_time);
-
+    for (timing, dir_var, material_handle, mut transform) in query.iter_mut() {
         let anim_var = ExplosionAnimationVariant::from_tick(&timing);
 
         let explosion_type = get_asset_variant(anim_var, *dir_var);
