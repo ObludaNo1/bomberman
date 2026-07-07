@@ -17,20 +17,27 @@ pub struct CameraScale(pub f32);
 #[derive(Component, Deref, DerefMut)]
 pub struct RenderScale(pub f32);
 
-fn calculate_scale(window: &Window, monitor: Option<&Monitor>) -> f32 {
-    let (target_width, target_height) = match window.mode {
+/// Returns the size of the window in pixels. Fullscreen and windowless fullscreen modes ignore
+/// window size and for those cases the actual window size is retrieved from used monitor.
+pub fn get_window_size(window: &Window, monitor: Option<&Monitor>) -> (f32, f32) {
+    match window.mode {
         WindowMode::Fullscreen(..) | WindowMode::BorderlessFullscreen(_) => {
             if let Some(monitor) = monitor {
                 (
                     monitor.physical_width as f32,
                     monitor.physical_height as f32,
                 )
+                    .into()
             } else {
-                (window.width(), window.height())
+                (window.width(), window.height()).into()
             }
         }
-        WindowMode::Windowed => (window.width(), window.height()),
-    };
+        WindowMode::Windowed => (window.width(), window.height()).into(),
+    }
+}
+
+fn recompute_window_size(window: &Window, monitor: Option<&Monitor>) -> f32 {
+    let (target_width, target_height) = get_window_size(window, monitor);
 
     let tile_width = TILESET_TILE_SIZE.x as f32;
     let tile_height = TILESET_TILE_SIZE.y as f32;
@@ -51,7 +58,7 @@ fn compute_scale(
         return;
     };
 
-    let scale = calculate_scale(window, monitor.single().ok());
+    let scale = recompute_window_size(window, monitor.single().ok());
 
     commands.insert_resource(CameraScale(scale));
 }
@@ -63,8 +70,8 @@ fn recompute_scale_on_window_change(
     mut resized_events: MessageReader<WindowResized>,
     mut scale_factor_events: MessageReader<WindowScaleFactorChanged>,
 ) {
-    let resized = resized_events.read().next().is_some();
-    let scale_changed = scale_factor_events.read().next().is_some();
+    let resized = resized_events.read().last().is_some();
+    let scale_changed = scale_factor_events.read().last().is_some();
 
     if !resized && !scale_changed {
         return;
@@ -75,7 +82,7 @@ fn recompute_scale_on_window_change(
         return;
     };
 
-    let scale = calculate_scale(window, monitor.single().ok());
+    let scale = recompute_window_size(window, monitor.single().ok());
 
     commands.insert_resource(CameraScale(scale));
 }
@@ -103,9 +110,8 @@ pub struct CameraScalePlugin;
 
 impl Plugin for CameraScalePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, compute_scale).add_systems(
-            PostUpdate,
-            (recompute_scale_on_window_change, update_transformations).chain(),
-        );
+        app.add_systems(PreStartup, compute_scale)
+            .add_systems(PreUpdate, recompute_scale_on_window_change)
+            .add_systems(PostUpdate, update_transformations);
     }
 }

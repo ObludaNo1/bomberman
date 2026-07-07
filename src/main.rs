@@ -1,6 +1,5 @@
 mod assets;
 mod bomb;
-mod camera;
 mod character;
 mod controls;
 mod map;
@@ -13,8 +12,6 @@ use bevy::{
     prelude::*,
     window::{WindowMode, WindowPlugin},
 };
-
-use crate::camera::MainCameraPlugin;
 
 fn get_assets_path() -> String {
     // TODO make it dependent on build directory
@@ -39,7 +36,6 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(MainCameraPlugin)
         .add_plugins(rendering::RenderingPlugin)
         .add_plugins(util::CameraScalePlugin)
         .add_plugins(map::Map)

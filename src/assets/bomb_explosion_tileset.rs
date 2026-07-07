@@ -1,7 +1,9 @@
-use bevy::prelude::*;
+use bevy::{image::ImageLoaderSettings, prelude::*};
 
 use crate::{
-    assets::{CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, material::ExplosionMaterial},
+    assets::{
+        CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles, material::ExplosionMaterial,
+    },
     tileset_enum,
 };
 
@@ -9,12 +11,6 @@ tileset_enum!(
     BombExplosion,
     TILESET_TILE_SIZE,
     (222, 205),
-    CHARACTER_TEXTURE_PATH,
-    ExplosionMaterial,
-    Color::srgba(0.9, 0.2, 0.05, 1.0),
-    Color::srgba(0.9, 0.65, 0.05, 0.75),
-    Color::srgba(0.9, 0.9, 0.05, 0.5),
-    Color::srgba(1.0, 1.0, 1.0, 0.0),
     ExplosionCenter1 => (19, 170),
     ExplosionStraight1 => (36, 153),
     ExplosionEnd1 => (2, 153),
@@ -28,3 +24,24 @@ tileset_enum!(
     ExplosionStraight4 => (195, 153),
     ExplosionEnd4 => (161, 153),
 );
+
+pub fn prepare_tilemap_material(
+    asset_server: &AssetServer,
+    material: &mut Assets<ExplosionMaterial>,
+) -> TilesetHandles<ExplosionMaterial> {
+    let image = asset_server.load_with_settings::<Image, ImageLoaderSettings>(
+        CHARACTER_TEXTURE_PATH,
+        |settings| {
+            settings.is_srgb = false;
+        },
+    );
+
+    let material = material.add(ExplosionMaterial::new(image, TILEMAP.atlas_size));
+
+    TilesetHandles(material)
+}
+
+// Color::srgba(0.9, 0.2, 0.05, 1.0),
+// Color::srgba(0.9, 0.65, 0.05, 0.75),
+// Color::srgba(0.9, 0.9, 0.05, 0.5),
+// Color::srgba(0.0, 0.0, 0.0, 0.0),

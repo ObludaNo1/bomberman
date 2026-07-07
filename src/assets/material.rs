@@ -10,7 +10,7 @@ use bevy::{
     sprite_render::{AlphaMode2d, Material2d, Material2dKey},
 };
 
-use crate::assets::COLOURING_SHADER_PATH;
+use crate::assets::{COLOURING_SHADER_PATH, EXPLOSIONS_SHADER_PATH, SECOND_PASS_SHADER_PATH};
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 // This material intentionally carries both palette data and per-entity frame data. In an ideal
@@ -124,15 +124,6 @@ pub struct ExplosionMaterial {
     #[sampler(1)]
     pub tileset_texture: Handle<Image>,
 
-    #[uniform(2)]
-    pub black_colour: LinearRgba,
-    #[uniform(3)]
-    pub dark_colour: LinearRgba,
-    #[uniform(4)]
-    pub light_colour: LinearRgba,
-    #[uniform(5)]
-    pub background_colour: LinearRgba,
-
     // Per-frame atlas UV rectangle written by gameplay systems.
     #[uniform(6)]
     pub uv_min: Vec2,
@@ -147,21 +138,10 @@ pub struct ExplosionMaterial {
 }
 
 impl ExplosionMaterial {
-    pub(super) fn new(
-        tileset_texture: Handle<Image>,
-        image_size: UVec2,
-        black_colour: Color,
-        dark_colour: Color,
-        light_colour: Color,
-        background_colour: Color,
-    ) -> Self {
+    pub(super) fn new(tileset_texture: Handle<Image>, image_size: UVec2) -> Self {
         Self {
             tileset_texture,
             inset: Vec2::new(0.75 / image_size.x as f32, 0.75 / image_size.y as f32),
-            black_colour: black_colour.to_linear(),
-            dark_colour: dark_colour.to_linear(),
-            light_colour: light_colour.to_linear(),
-            background_colour: background_colour.to_linear(),
             uv_min: Vec2::ZERO,
             uv_max: Vec2::ONE,
             flip_x: 0.0,
@@ -180,7 +160,73 @@ impl ExplosionMaterial {
 
 impl Material2d for ExplosionMaterial {
     fn fragment_shader() -> ShaderRef {
-        COLOURING_SHADER_PATH.into()
+        EXPLOSIONS_SHADER_PATH.into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode2d {
+        AlphaMode2d::Blend
+    }
+
+    fn specialize(
+        descriptor: &mut RenderPipelineDescriptor,
+        _layout: &MeshVertexBufferLayoutRef,
+        _key: Material2dKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        // Use a screen-style blend so overlaps brighten without washing the palette toward yellow.
+        if let Some(fragment) = &mut descriptor.fragment {
+            if let Some(target) = fragment.targets.first_mut() {
+                if let Some(target_state) = target.as_mut() {
+                    target_state.blend = Some(BlendState {
+                        color: BlendComponent {
+                            src_factor: BlendFactor::Src,
+                            dst_factor: BlendFactor::Dst,
+                            operation: BlendOperation::Min,
+                        },
+                        alpha: BlendComponent {
+                            src_factor: BlendFactor::Src,
+                            dst_factor: BlendFactor::Dst,
+                            operation: BlendOperation::Max,
+                        },
+                    });
+                    target_state.write_mask = ColorWrites::ALL;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct SecondPassMaterial {
+    #[texture(0)]
+    #[sampler(1)]
+    pub tileset_texture: Handle<Image>,
+
+    #[uniform(2)]
+    pub black_colour: LinearRgba,
+    #[uniform(3)]
+    pub dark_colour: LinearRgba,
+    #[uniform(4)]
+    pub light_colour: LinearRgba,
+    #[uniform(5)]
+    pub background_colour: LinearRgba,
+}
+
+impl SecondPassMaterial {
+    pub fn new(tileset_texture: Handle<Image>) -> Self {
+        Self {
+            tileset_texture,
+            black_colour: Color::srgba(0.9, 0.2, 0.05, 1.0).to_linear(),
+            dark_colour: Color::srgba(0.9, 0.65, 0.05, 0.75).to_linear(),
+            light_colour: Color::srgba(0.9, 0.9, 0.05, 0.5).to_linear(),
+            background_colour: Color::srgba(0.0, 0.0, 0.0, 0.0).to_linear(),
+        }
+    }
+}
+
+impl Material2d for SecondPassMaterial {
+    fn fragment_shader() -> ShaderRef {
+        SECOND_PASS_SHADER_PATH.into()
     }
 
     fn alpha_mode(&self) -> AlphaMode2d {

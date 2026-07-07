@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{camera::visibility::RenderLayers, platform::collections::HashMap, prelude::*};
 
 mod animation;
 
@@ -266,6 +266,7 @@ fn explode_expired_bombs(
                 Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
                 BombTiming::new(EXPLOSION_TICKS, EXPLOSION_TICK_DURATION),
                 variant,
+                RenderLayers::layer(1),
             ));
         }
 

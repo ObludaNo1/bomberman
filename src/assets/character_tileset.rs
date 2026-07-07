@@ -1,7 +1,9 @@
-use bevy::prelude::*;
+use bevy::{image::ImageLoaderSettings, prelude::*};
 
 use crate::{
-    assets::{CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, material::ColouringMaterial},
+    assets::{
+        CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles, material::ColouringMaterial,
+    },
     tileset_enum,
 };
 
@@ -9,12 +11,6 @@ tileset_enum!(
     Character,
     TILESET_TILE_SIZE,
     (222, 205),
-    CHARACTER_TEXTURE_PATH,
-    ColouringMaterial,
-    Color::srgba(0.0, 0.0, 0.0, 1.0),
-    Color::srgba(0.3, 0.3, 0.3, 1.0),
-    Color::srgba(0.6, 0.6, 0.6, 1.0),
-    Color::srgba(1.0, 1.0, 1.0, 0.0),
     StandingDown => (1, 84),
     MovingDown => (18, 84),
     StandingUp => (35, 84),
@@ -23,3 +19,26 @@ tileset_enum!(
     StandingRight => (86, 84),
     MovingRight2 => (103, 84),
 );
+
+pub fn prepare_tilemap_material(
+    asset_server: &AssetServer,
+    material: &mut Assets<ColouringMaterial>,
+) -> TilesetHandles<ColouringMaterial> {
+    let image = asset_server.load_with_settings::<Image, ImageLoaderSettings>(
+        CHARACTER_TEXTURE_PATH,
+        |settings| {
+            settings.is_srgb = false;
+        },
+    );
+
+    let material = material.add(ColouringMaterial::new(
+        image,
+        TILEMAP.atlas_size,
+        Color::srgba(0.0, 0.0, 0.0, 1.0),
+        Color::srgba(0.3, 0.3, 0.3, 1.0),
+        Color::srgba(0.6, 0.6, 0.6, 1.0),
+        Color::srgba(1.0, 1.0, 1.0, 0.0),
+    ));
+
+    TilesetHandles(material)
+}
