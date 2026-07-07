@@ -7,6 +7,7 @@ pub struct Character;
 pub enum MapTileMarker {
     Empty,
     Wall,
+    IndestructibleWall,
     Bomb,
     Explosion,
 }
@@ -19,6 +20,7 @@ impl MapTileMarker {
             M::Explosion => true,
             M::Bomb => false,
             M::Wall => false,
+            M::IndestructibleWall => false,
         }
     }
 

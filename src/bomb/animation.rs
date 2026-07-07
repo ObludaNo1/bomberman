@@ -5,9 +5,12 @@ use bevy::prelude::*;
 use crate::{
     assets::{
         bomb_explosion_tileset::{self, BombExplosionTileType},
-        material::ExplosionMaterial,
+        map_tileset::{self, MapTileType},
+        material::{ColouringMaterial, ExplosionMaterial},
     },
-    bomb::{BombTiming, ExplosionOrientation, ExplosionPathType, ExplosionTileVariant},
+    bomb::{
+        BombTiming, ExplodingWall, ExplosionOrientation, ExplosionPathType, ExplosionTileVariant,
+    },
     util::RenderScale,
     world_entities::{Bomb, Explosion},
 };
@@ -103,5 +106,23 @@ pub fn animate_explosion(
             scale: transform.scale,
             rotation: Quat::from_rotation_z(angle),
         };
+    }
+}
+
+pub fn animate_exploding_walls(
+    query: Query<(&BombTiming, &mut MeshMaterial2d<ColouringMaterial>), With<ExplodingWall>>,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
+) {
+    for (timing, material_handle) in query.iter() {
+        let tile = match timing.ticks {
+            0 => MapTileType::WallFade1,
+            1 => MapTileType::WallFade2,
+            2 => MapTileType::WallFade3,
+            _ => MapTileType::WallFade4,
+        };
+
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            material.set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(tile));
+        }
     }
 }

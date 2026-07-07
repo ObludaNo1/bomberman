@@ -1,6 +1,10 @@
 use std::time::Duration;
 
-use bevy::{camera::visibility::RenderLayers, platform::collections::HashMap, prelude::*};
+use bevy::{
+    camera::visibility::RenderLayers,
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 
 mod animation;
 
@@ -8,11 +12,12 @@ use crate::{
     assets::{
         TilesetHandles, bomb_explosion_tileset,
         bomb_tileset::{self, BombTileType},
+        map_tileset::{self, MapTileType},
         material::{ColouringMaterial, ExplosionMaterial},
     },
-    bomb::animation::{animate_bomb, animate_explosion},
+    bomb::animation::{animate_bomb, animate_exploding_walls, animate_explosion},
     controls::Controls,
-    map::{CollisionMapTile, WorldMap},
+    map::{CollisionMapTile, MapTile, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
@@ -24,6 +29,11 @@ const BOMB_TICK_DURATION: f32 = 0.75;
 
 const EXPLOSION_TICKS: u32 = 9;
 const EXPLOSION_TICK_DURATION: f32 = 0.125;
+
+const WALL_EXPLOSION_TICKS: u32 = 4;
+// match the duration of the explosion animation to the duration of the wall explosion animation
+const WALL_EXPLOSION_TICK_DURATION: f32 =
+    EXPLOSION_TICK_DURATION * EXPLOSION_TICKS as f32 / WALL_EXPLOSION_TICKS as f32;
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 struct BombTiming {
@@ -65,6 +75,9 @@ impl Default for ExplosionRadius {
         Self(2)
     }
 }
+
+#[derive(Component)]
+struct ExplodingWall;
 
 fn spawn_bomb_when_requested(
     mut commands: Commands,
@@ -153,9 +166,11 @@ fn get_explosion_tiles(
 ) -> (
     Vec<(CollisionMapTile, ExplosionTileVariant)>,
     Vec<CollisionMapTile>,
+    Vec<CollisionMapTile>,
 ) {
     let mut explosion_tiles = Vec::new();
     let mut chained_bombs = Vec::new();
+    let mut destroyed_walls = Vec::new();
 
     if let Some(center_tile) = world_map.get_tile_at_position(bomb_position) {
         explosion_tiles.push((
@@ -191,7 +206,11 @@ fn get_explosion_tiles(
                             chained_bombs.push(tile);
                             break;
                         }
+                        MapTileMarker::IndestructibleWall => {
+                            break;
+                        }
                         MapTileMarker::Wall => {
+                            destroyed_walls.push(tile);
                             break;
                         }
                     }
@@ -202,7 +221,7 @@ fn get_explosion_tiles(
         }
     }
 
-    (explosion_tiles, chained_bombs)
+    (explosion_tiles, chained_bombs, destroyed_walls)
 }
 
 fn explode_expired_bombs(
@@ -211,7 +230,11 @@ fn explode_expired_bombs(
     mut explosion_materials: ResMut<Assets<ExplosionMaterial>>,
     mesh_handle: Res<MeshHandle>,
     bomb_assets: Res<BombAssets>,
-    mut query: Query<(Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius), With<Bomb>>,
+    mut query: Query<
+        (Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius),
+        (With<Bomb>, Without<MapTile>),
+    >,
+    map_tiles: Query<(Entity, &WorldPosition), (With<MapTile>, Without<Bomb>)>,
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
@@ -238,13 +261,17 @@ fn explode_expired_bombs(
         }
     }
 
+    let mut walls_to_destroy = HashSet::new();
+
     let mut i = 0;
     while let Some((entity, world_pos, explosion_radius)) = bombs_to_explode_vec.get(i) {
         i += 1;
 
         commands.entity(*entity).despawn();
-        let (explosions, bombs_to_explode) =
+        let (explosions, bombs_to_explode, destroyed_walls) =
             get_explosion_tiles(&world_map, world_pos, explosion_radius.0);
+
+        walls_to_destroy.extend(destroyed_walls.iter().map(|tile| (tile.x, tile.y)));
 
         for (tile, variant) in explosions {
             world_map.set_tile(tile.x, tile.y, MapTileMarker::Explosion);
@@ -276,6 +303,16 @@ fn explode_expired_bombs(
             {
                 bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
             }
+        }
+    }
+
+    for (entity, world_pos) in map_tiles {
+        let (x, y) = world_map.get_position_from_world(world_pos);
+        if walls_to_destroy.contains(&(x, y)) {
+            commands.entity(entity).insert((
+                ExplodingWall,
+                BombTiming::new(WALL_EXPLOSION_TICKS, WALL_EXPLOSION_TICK_DURATION),
+            ));
         }
     }
 }
@@ -325,6 +362,39 @@ fn prepare_bomb_assets(
     });
 }
 
+fn advance_exploding_walls(
+    mut commands: Commands,
+    mut world_map: ResMut<WorldMap>,
+    mut query: Query<
+        (
+            Entity,
+            &WorldPosition,
+            &mut BombTiming,
+            &MeshMaterial2d<ColouringMaterial>,
+        ),
+        With<ExplodingWall>,
+    >,
+    time: Res<Time>,
+    mut materials: ResMut<Assets<ColouringMaterial>>,
+) {
+    let delta_time = time.delta();
+    for (entity, position, mut bomb_timing, material_handle) in query.iter_mut() {
+        bomb_timing.update(delta_time);
+        if bomb_timing.is_finished() {
+            commands
+                .entity(entity)
+                .remove::<(ExplodingWall, BombTiming)>();
+
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                material.set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(MapTileType::Floor));
+            }
+            if let Some(tile) = world_map.get_tile_at_position(position) {
+                world_map.set_tile(tile.x, tile.y, MapTileMarker::Empty);
+            }
+        }
+    }
+}
+
 pub struct BombPlugin;
 
 impl Plugin for BombPlugin {
@@ -336,8 +406,9 @@ impl Plugin for BombPlugin {
                     spawn_bomb_when_requested,
                     explode_expired_bombs,
                     remove_expired_explosions,
+                    advance_exploding_walls,
                 ),
-                (animate_bomb, animate_explosion),
+                (animate_bomb, animate_explosion, animate_exploding_walls),
             )
                 .chain(),
         );

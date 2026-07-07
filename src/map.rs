@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::{RngExt, SeedableRng, rngs::StdRng};
 
 use crate::{
     assets::{map_tileset, material::ColouringMaterial},
@@ -9,6 +10,9 @@ use crate::{
 
 pub const MAP_WIDTH: i32 = 19;
 pub const MAP_HEIGHT: i32 = 15;
+
+const RND_SEED: u64 = 123456789;
+const WALL_DENSITY: f64 = 0.60;
 
 #[derive(Resource, Debug, Clone, PartialEq, Eq)]
 pub struct WorldMap {
@@ -58,7 +62,7 @@ impl WorldMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CollisionMapTile {
     pub x: usize,
     pub y: usize,
@@ -75,6 +79,19 @@ impl CollisionMapTile {
     }
 }
 
+#[derive(Resource, Debug, Clone, PartialEq, Eq)]
+pub struct MapColouringMaterial(pub Handle<ColouringMaterial>);
+
+#[derive(Component)]
+pub struct MapTile;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Tile {
+    IndestructibleWall,
+    Wall,
+    Floor,
+}
+
 fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -84,41 +101,55 @@ fn setup_map(
     let tilemap_handles = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
     let mut map_tile_markers = Vec::new();
 
+    commands.insert_resource(MapColouringMaterial(tilemap_handles.0.clone()));
+
     let Some(colouring_material) = material.get(&tilemap_handles.0) else {
         return;
     };
 
-    let mut wall_material = colouring_material.clone();
-    wall_material.set_uv_rect(
+    let mut indestructible_wall_material = colouring_material.clone();
+    indestructible_wall_material.set_uv_rect(
         map_tileset::TILEMAP.sprite_uv_rect(map_tileset::MapTileType::IndestructibleWall),
     );
     let mut floor_material = colouring_material.clone();
     floor_material
         .set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(map_tileset::MapTileType::Floor));
 
-    let wall_material = material.add(wall_material);
-    let floor_material = material.add(floor_material);
+    let mut wall_material = colouring_material.clone();
+    wall_material.set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(map_tileset::MapTileType::Wall));
+
+    let mut rng_gen = StdRng::seed_from_u64(RND_SEED);
 
     for y in 0..MAP_HEIGHT {
         for x in 0..MAP_WIDTH {
-            let is_indestructible_wall = x == 0
+            let tile_marker = if x == 0
                 || x == MAP_WIDTH - 1
                 || y == 0
                 || y == MAP_HEIGHT - 1
-                || (x % 2 == 0 && y % 2 == 0);
-
-            map_tile_markers.push(if is_indestructible_wall {
-                MapTileMarker::Wall
+                || (x % 2 == 0 && y % 2 == 0)
+            {
+                Tile::IndestructibleWall
+            } else if x <= 2 && y >= MAP_HEIGHT - 2 - 1 {
+                Tile::Floor
+            } else if rng_gen.random_bool(WALL_DENSITY) {
+                Tile::Wall
             } else {
-                MapTileMarker::Empty
+                Tile::Floor
+            };
+
+            map_tile_markers.push(match tile_marker {
+                Tile::IndestructibleWall => MapTileMarker::IndestructibleWall,
+                Tile::Wall => MapTileMarker::Wall,
+                Tile::Floor => MapTileMarker::Empty,
             });
 
             commands.spawn((
+                MapTile,
                 Mesh2d(mesh_handle.0.clone()),
-                MeshMaterial2d(if is_indestructible_wall {
-                    wall_material.clone()
-                } else {
-                    floor_material.clone()
+                MeshMaterial2d(match tile_marker {
+                    Tile::IndestructibleWall => material.add(indestructible_wall_material.clone()),
+                    Tile::Wall => material.add(wall_material.clone()),
+                    Tile::Floor => material.add(floor_material.clone()),
                 }),
                 WorldPosition(Vec2 {
                     x: x as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
