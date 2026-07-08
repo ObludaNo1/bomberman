@@ -5,7 +5,7 @@ use crate::{
     character::{MovementDirection, animation::CharacterAnimationController},
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{Character, InGameEntity},
+    world_entities::{Character, InGameEntity, Killable},
 };
 
 pub fn spawn_character(
@@ -27,6 +27,7 @@ pub fn spawn_character(
     let spawn_position = Vec2::new(-8.0, 6.0);
     commands.spawn((
         Character,
+        Killable,
         InGameEntity,
         WorldPosition(spawn_position),
         Mesh2d(mesh_handle.0.clone()),

@@ -37,3 +37,6 @@ pub struct Explosion;
 
 #[derive(Component)]
 pub struct InGameEntity;
+
+#[derive(Component)]
+pub struct Killable;

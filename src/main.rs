@@ -2,6 +2,7 @@ mod assets;
 mod bomb;
 mod character;
 mod controls;
+mod death;
 mod game_state;
 mod map;
 mod position;
@@ -44,5 +45,6 @@ fn main() {
         .add_plugins(character::CharacterPlugin)
         .add_plugins(bomb::BombPlugin)
         .add_plugins(game_state::GameStatePlugin)
+        .add_plugins(death::DeathPlugin)
         .run();
 }
