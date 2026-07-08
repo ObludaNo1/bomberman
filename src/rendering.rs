@@ -16,6 +16,7 @@ use crate::{
         TILESET_TILE_SIZE,
         material::{ColouringMaterial, ExplosionMaterial, SecondPassMaterial},
     },
+    game_state::GameState,
     util::get_window_size,
 };
 
@@ -191,6 +192,9 @@ impl Plugin for RenderingPlugin {
             .add_plugins(Material2dPlugin::<ExplosionMaterial>::default())
             .add_plugins(Material2dPlugin::<SecondPassMaterial>::default())
             .add_systems(PreStartup, setup_camera)
-            .add_systems(Update, resize_render_target_on_window_resize);
+            .add_systems(
+                Update,
+                resize_render_target_on_window_resize.run_if(in_state(GameState::Playing)),
+            );
     }
 }

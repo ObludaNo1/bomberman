@@ -3,9 +3,10 @@ use rand::{RngExt, SeedableRng, rngs::StdRng};
 
 use crate::{
     assets::{map_tileset, material::ColouringMaterial},
+    game_state::GameState,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::MapTileMarker,
+    world_entities::{InGameEntity, MapTileMarker},
 };
 
 pub const MAP_WIDTH: i32 = 19;
@@ -145,6 +146,7 @@ fn setup_map(
 
             commands.spawn((
                 MapTile,
+                InGameEntity,
                 Mesh2d(mesh_handle.0.clone()),
                 MeshMaterial2d(match tile_marker {
                     Tile::IndestructibleWall => material.add(indestructible_wall_material.clone()),
@@ -169,6 +171,6 @@ pub struct Map;
 
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_map);
+        app.add_systems(OnEnter(GameState::Playing), setup_map);
     }
 }

@@ -7,6 +7,7 @@ use bevy::{
 
 use crate::{
     assets::TILESET_TILE_SIZE,
+    game_state::GameState,
     map::{MAP_HEIGHT, MAP_WIDTH},
     position::WorldPosition,
 };
@@ -112,6 +113,9 @@ impl Plugin for CameraScalePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, compute_scale)
             .add_systems(PreUpdate, recompute_scale_on_window_change)
-            .add_systems(PostUpdate, update_transformations);
+            .add_systems(
+                PostUpdate,
+                update_transformations.run_if(in_state(GameState::Playing)),
+            );
     }
 }

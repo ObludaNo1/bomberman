@@ -34,3 +34,6 @@ pub struct Bomb;
 
 #[derive(Component)]
 pub struct Explosion;
+
+#[derive(Component)]
+pub struct InGameEntity;

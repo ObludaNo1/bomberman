@@ -17,11 +17,12 @@ use crate::{
     },
     bomb::animation::{animate_bomb, animate_exploding_walls, animate_explosion},
     controls::Controls,
+    game_state::GameState,
     map::{CollisionMapTile, MapTile, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
-    world_entities::{Bomb, Character, Explosion, MapTileMarker},
+    world_entities::{Bomb, Character, Explosion, InGameEntity, MapTileMarker},
 };
 
 const BOMB_TICKS: u32 = 6;
@@ -105,6 +106,7 @@ fn spawn_bomb_when_requested(
         {
             commands.spawn((
                 Bomb,
+                InGameEntity,
                 tile.world_pos(),
                 Mesh2d(mesh_handle.0.clone()),
                 MeshMaterial2d(bomb_material.clone()),
@@ -287,6 +289,7 @@ fn explode_expired_bombs(
             let explosion_material = explosion_materials.add(explosion_material);
             commands.spawn((
                 Explosion,
+                InGameEntity,
                 tile.world_pos(),
                 Mesh2d(mesh_handle.0.clone()),
                 MeshMaterial2d(explosion_material),
@@ -410,7 +413,8 @@ impl Plugin for BombPlugin {
                 ),
                 (animate_bomb, animate_explosion, animate_exploding_walls),
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(GameState::Playing)),
         );
     }
 }

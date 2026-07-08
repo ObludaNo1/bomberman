@@ -2,6 +2,7 @@ mod assets;
 mod bomb;
 mod character;
 mod controls;
+mod game_state;
 mod map;
 mod position;
 mod rendering;
@@ -42,5 +43,6 @@ fn main() {
         .add_plugins(controls::ControlsPlugin)
         .add_plugins(character::CharacterPlugin)
         .add_plugins(bomb::BombPlugin)
+        .add_plugins(game_state::GameStatePlugin)
         .run();
 }
