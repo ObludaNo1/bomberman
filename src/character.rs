@@ -19,12 +19,7 @@ pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), spawn_character)
-            .add_systems(
-                Update,
-                (
-                    move_character.in_set(GameplaySet::Movement),
-                    animate_character.in_set(GameplaySet::Animation),
-                ),
-            );
+            .add_systems(FixedUpdate, move_character.in_set(GameplaySet::Movement))
+            .add_systems(PostUpdate, animate_character.in_set(GameplaySet::Animation));
     }
 }

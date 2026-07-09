@@ -58,6 +58,6 @@ pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, insert_default_controls)
-            .add_systems(Update, map_controls_input.in_set(GameplaySet::Controls));
+            .add_systems(PreUpdate, map_controls_input.in_set(GameplaySet::Controls));
     }
 }

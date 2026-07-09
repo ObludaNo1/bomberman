@@ -236,7 +236,7 @@ fn explode_expired_bombs(
         (With<Bomb>, Without<MapTile>),
     >,
     map_tiles: Query<(Entity, &WorldPosition), (With<MapTile>, Without<Bomb>)>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
 ) {
     let delta_time = time.delta();
 
@@ -323,7 +323,7 @@ fn remove_expired_explosions(
     mut commands: Commands,
     mut world_map: ResMut<WorldMap>,
     mut query: Query<(Entity, &WorldPosition, &mut BombTiming), With<Explosion>>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
 ) {
     let delta_time = time.delta();
     for (entity, position, mut bomb_timing) in query.iter_mut() {
@@ -376,7 +376,7 @@ fn advance_exploding_walls(
         ),
         With<ExplodingWall>,
     >,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     mut materials: ResMut<Assets<ColouringMaterial>>,
 ) {
     let delta_time = time.delta();
@@ -401,20 +401,24 @@ pub struct BombPlugin;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, prepare_bomb_assets).add_systems(
-            Update,
-            (
-                spawn_bomb_when_requested.in_set(GameplaySet::Bomb),
+        app.add_systems(Startup, prepare_bomb_assets)
+            .add_systems(
+                FixedUpdate,
                 (
-                    explode_expired_bombs,
-                    advance_exploding_walls,
-                    remove_expired_explosions,
-                )
-                    .chain()
-                    .in_set(GameplaySet::Explosion),
+                    spawn_bomb_when_requested.in_set(GameplaySet::Bomb),
+                    (
+                        explode_expired_bombs,
+                        advance_exploding_walls,
+                        remove_expired_explosions,
+                    )
+                        .chain()
+                        .in_set(GameplaySet::Explosion),
+                ),
+            )
+            .add_systems(
+                PostUpdate,
                 (animate_bomb, animate_explosion, animate_exploding_walls)
                     .in_set(GameplaySet::Animation),
-            ),
-        );
+            );
     }
 }

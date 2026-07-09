@@ -144,7 +144,7 @@ fn move_in_step(
 pub fn move_character(
     mut characters: Query<(&mut WorldPosition, &mut MovementDirection), With<Character>>,
     controls: Res<Controls>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     collision_map: Res<WorldMap>,
 ) {
     let delta_time = time.delta_secs();

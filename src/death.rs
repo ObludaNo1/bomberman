@@ -58,6 +58,6 @@ pub struct DeathPlugin;
 
 impl Plugin for DeathPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, check_kill_entities.in_set(GameplaySet::Death));
+        app.add_systems(FixedUpdate, check_kill_entities.in_set(GameplaySet::Death));
     }
 }

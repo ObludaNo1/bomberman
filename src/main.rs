@@ -49,17 +49,23 @@ fn main() {
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
         .configure_sets(
-            Update,
+            PreUpdate,
+            GameplaySet::Controls.run_if(in_state(GameState::Playing)),
+        )
+        .configure_sets(
+            FixedUpdate,
             (
-                GameplaySet::Controls,
                 GameplaySet::Movement,
                 GameplaySet::Bomb,
                 GameplaySet::Explosion,
                 GameplaySet::Death,
-                GameplaySet::Animation,
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),
+        )
+        .configure_sets(
+            PostUpdate,
+            GameplaySet::Animation.run_if(in_state(GameState::Playing)),
         )
         .run();
 }
