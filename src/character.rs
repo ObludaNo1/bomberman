@@ -8,6 +8,7 @@ use crate::{
     character::{animation::animate_character, movement::move_character, spawn::spawn_character},
     controls::Direction,
     game_state::GameState,
+    world_entities::GameplaySet,
 };
 
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,9 +21,10 @@ impl Plugin for CharacterPlugin {
         app.add_systems(OnEnter(GameState::Playing), spawn_character)
             .add_systems(
                 Update,
-                (move_character, animate_character)
-                    .chain()
-                    .run_if(in_state(GameState::Playing)),
+                (
+                    move_character.in_set(GameplaySet::Movement),
+                    animate_character.in_set(GameplaySet::Animation),
+                ),
             );
     }
 }

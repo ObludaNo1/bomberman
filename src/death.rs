@@ -4,7 +4,7 @@ use crate::{
     game_state::GameState,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, Killable, MapTileMarker},
+    world_entities::{Character, GameplaySet, Killable, MapTileMarker},
 };
 
 const KILL_DISTANCE_THRESHOLD: f32 = 0.75;
@@ -58,9 +58,6 @@ pub struct DeathPlugin;
 
 impl Plugin for DeathPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            check_kill_entities.run_if(in_state(GameState::Playing)),
-        );
+        app.add_systems(Update, check_kill_entities.in_set(GameplaySet::Death));
     }
 }

@@ -17,12 +17,11 @@ use crate::{
     },
     bomb::animation::{animate_bomb, animate_exploding_walls, animate_explosion},
     controls::Controls,
-    game_state::GameState,
     map::{CollisionMapTile, MapTile, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
-    world_entities::{Bomb, Character, Explosion, InGameEntity, MapTileMarker},
+    world_entities::{Bomb, Character, Explosion, GameplaySet, InGameEntity, MapTileMarker},
 };
 
 const BOMB_TICKS: u32 = 6;
@@ -405,16 +404,17 @@ impl Plugin for BombPlugin {
         app.add_systems(Startup, prepare_bomb_assets).add_systems(
             Update,
             (
+                spawn_bomb_when_requested.in_set(GameplaySet::Bomb),
                 (
-                    spawn_bomb_when_requested,
                     explode_expired_bombs,
-                    remove_expired_explosions,
                     advance_exploding_walls,
-                ),
-                (animate_bomb, animate_explosion, animate_exploding_walls),
-            )
-                .chain()
-                .run_if(in_state(GameState::Playing)),
+                    remove_expired_explosions,
+                )
+                    .chain()
+                    .in_set(GameplaySet::Explosion),
+                (animate_bomb, animate_explosion, animate_exploding_walls)
+                    .in_set(GameplaySet::Animation),
+            ),
         );
     }
 }

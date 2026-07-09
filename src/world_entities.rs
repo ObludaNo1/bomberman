@@ -40,3 +40,13 @@ pub struct InGameEntity;
 
 #[derive(Component)]
 pub struct Killable;
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum GameplaySet {
+    Controls,
+    Movement,
+    Bomb,
+    Explosion,
+    Death,
+    Animation,
+}

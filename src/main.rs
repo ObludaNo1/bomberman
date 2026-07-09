@@ -15,6 +15,8 @@ use bevy::{
     window::{WindowMode, WindowPlugin},
 };
 
+use crate::{game_state::GameState, world_entities::GameplaySet};
+
 fn get_assets_path() -> String {
     // TODO make it dependent on build directory
     "assets".to_string()
@@ -46,5 +48,18 @@ fn main() {
         .add_plugins(bomb::BombPlugin)
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
+        .configure_sets(
+            Update,
+            (
+                GameplaySet::Controls,
+                GameplaySet::Movement,
+                GameplaySet::Bomb,
+                GameplaySet::Explosion,
+                GameplaySet::Death,
+                GameplaySet::Animation,
+            )
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        )
         .run();
 }

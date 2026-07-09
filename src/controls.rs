@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::world_entities::GameplaySet;
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Direction {
     Up,
@@ -56,6 +58,6 @@ pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, insert_default_controls)
-            .add_systems(Update, map_controls_input);
+            .add_systems(Update, map_controls_input.in_set(GameplaySet::Controls));
     }
 }
