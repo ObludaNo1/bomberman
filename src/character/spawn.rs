@@ -1,8 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{character_tileset, material::ColouringMaterial},
-    character::{MovementDirection, animation::CharacterAnimationController},
+    animation::{AnimationController, MovementDirection},
+    assets::{
+        character_tileset::{self, CharacterTileType},
+        material::ColouringMaterial,
+    },
+    character::animation::get_character_animation_frames,
     position::WorldPosition,
     rendering::MeshHandle,
     world_entities::{Character, InGameEntity, Killable},
@@ -33,7 +37,7 @@ pub fn spawn_character(
         Mesh2d(mesh_handle.0.clone()),
         MeshMaterial2d(character_material),
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
-        CharacterAnimationController::default(),
+        AnimationController::<CharacterTileType>::new(get_character_animation_frames),
         MovementDirection(None),
     ));
 }

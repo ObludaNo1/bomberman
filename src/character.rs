@@ -6,13 +6,9 @@ use bevy::prelude::*;
 
 use crate::{
     character::{animation::animate_character, movement::move_character, spawn::spawn_character},
-    controls::Direction,
     game_state::GameState,
     world_entities::GameplaySet,
 };
-
-#[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
-struct MovementDirection(pub Option<Direction>);
 
 pub struct CharacterPlugin;
 

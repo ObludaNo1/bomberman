@@ -3,7 +3,7 @@ use std::ops::Mul;
 use bevy::prelude::*;
 
 use crate::{
-    character::MovementDirection,
+    animation::MovementDirection,
     controls::{Controls, Direction},
     map::WorldMap,
     position::WorldPosition,

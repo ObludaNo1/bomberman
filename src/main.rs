@@ -1,3 +1,4 @@
+mod animation;
 mod assets;
 mod bomb;
 mod character;
