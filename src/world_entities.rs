@@ -41,7 +41,7 @@ pub struct InGameEntity;
 #[derive(Component)]
 pub struct Killable;
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum GameplaySet {
     Controls,
     Movement,
@@ -49,4 +49,10 @@ pub enum GameplaySet {
     Explosion,
     Death,
     Animation,
+}
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum SpawnSystemSet {
+    CreateMap,
+    SpawnEnemies,
 }

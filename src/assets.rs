@@ -1,6 +1,7 @@
 pub mod bomb_explosion_tileset;
 pub mod bomb_tileset;
 pub mod character_tileset;
+pub mod enemy_tileset;
 pub mod map_tileset;
 pub mod material;
 mod tileset_enum;

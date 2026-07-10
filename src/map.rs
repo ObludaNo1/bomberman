@@ -6,11 +6,11 @@ use crate::{
     game_state::GameState,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{InGameEntity, MapTileMarker},
+    world_entities::{InGameEntity, MapTileMarker, SpawnSystemSet},
 };
 
-pub const MAP_WIDTH: i32 = 19;
-pub const MAP_HEIGHT: i32 = 15;
+pub const MAP_WIDTH: usize = 19;
+pub const MAP_HEIGHT: usize = 15;
 
 const RND_SEED: u64 = 123456789;
 const WALL_DENSITY: f64 = 0.60;
@@ -21,11 +21,11 @@ pub struct WorldMap {
 }
 
 impl WorldMap {
-    pub fn width(&self) -> i32 {
+    pub fn width(&self) -> usize {
         MAP_WIDTH
     }
 
-    pub fn height(&self) -> i32 {
+    pub fn height(&self) -> usize {
         MAP_HEIGHT
     }
 
@@ -60,6 +60,25 @@ impl WorldMap {
         if let Some(tile) = self.tiles.get_mut(index) {
             *tile = marker;
         }
+    }
+
+    pub fn is_starting_area(x: usize, y: usize) -> bool {
+        x <= 2 && y >= MAP_HEIGHT - 2 - 1
+    }
+
+    pub fn get_empty_tiles_non_starting_area(&self) -> impl Iterator<Item = CollisionMapTile> {
+        self.tiles
+            .iter()
+            .enumerate()
+            .filter_map(move |(index, &marker)| {
+                if marker == MapTileMarker::Empty {
+                    let x = index % self.width() as usize;
+                    let y = index / self.width() as usize;
+                    (!Self::is_starting_area(x, y)).then(|| CollisionMapTile { x, y, marker })
+                } else {
+                    None
+                }
+            })
     }
 }
 
@@ -130,7 +149,7 @@ fn setup_map(
                 || (x % 2 == 0 && y % 2 == 0)
             {
                 Tile::IndestructibleWall
-            } else if x <= 2 && y >= MAP_HEIGHT - 2 - 1 {
+            } else if WorldMap::is_starting_area(x, y) {
                 Tile::Floor
             } else if rng_gen.random_bool(WALL_DENSITY) {
                 Tile::Wall
@@ -171,6 +190,9 @@ pub struct Map;
 
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), setup_map);
+        app.add_systems(
+            OnEnter(GameState::Playing),
+            setup_map.in_set(SpawnSystemSet::CreateMap),
+        );
     }
 }

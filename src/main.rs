@@ -4,6 +4,7 @@ mod bomb;
 mod character;
 mod controls;
 mod death;
+mod enemy;
 mod game_state;
 mod map;
 mod position;
@@ -16,7 +17,10 @@ use bevy::{
     window::{WindowMode, WindowPlugin},
 };
 
-use crate::{game_state::GameState, world_entities::GameplaySet};
+use crate::{
+    game_state::GameState,
+    world_entities::{GameplaySet, SpawnSystemSet},
+};
 
 fn get_assets_path() -> String {
     // TODO make it dependent on build directory
@@ -46,6 +50,7 @@ fn main() {
         .add_plugins(map::Map)
         .add_plugins(controls::ControlsPlugin)
         .add_plugins(character::CharacterPlugin)
+        .add_plugins(enemy::EnemyPlugin)
         .add_plugins(bomb::BombPlugin)
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
@@ -67,6 +72,10 @@ fn main() {
         .configure_sets(
             PostUpdate,
             GameplaySet::Animation.run_if(in_state(GameState::Playing)),
+        )
+        .configure_sets(
+            OnEnter(GameState::Playing),
+            (SpawnSystemSet::CreateMap, SpawnSystemSet::SpawnEnemies).chain(),
         )
         .run();
 }
