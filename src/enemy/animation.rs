@@ -8,8 +8,7 @@ use crate::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
-    enemy::Enemy,
-    world_entities::Direction,
+    world_entities::{Direction, Enemy},
 };
 
 const ENEMY_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;

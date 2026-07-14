@@ -17,14 +17,11 @@ use crate::{
     game_state::GameState,
     map::WorldMap,
     rendering::MeshHandle,
-    world_entities::{GameplaySet, InGameEntity, Killable, SpawnSystemSet},
+    world_entities::{Enemy, GameplaySet, InGameEntity, Killable, SpawnSystemSet},
 };
 
 const ENEMY_RNG_SEED: u64 = 1234567890;
 const ENEMIES_SPAWNED: usize = 5;
-
-#[derive(Component)]
-struct Enemy;
 
 #[derive(Resource, Deref, DerefMut)]
 struct EnemyRngGen(pub StdRng);

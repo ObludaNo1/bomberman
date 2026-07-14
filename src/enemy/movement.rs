@@ -3,10 +3,10 @@ use rand::RngExt;
 
 use crate::{
     animation::MovementDirection,
-    enemy::{Enemy, EnemyRngGen},
+    enemy::EnemyRngGen,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Direction, MapTileMarker},
+    world_entities::{Direction, Enemy, MapTileMarker},
 };
 
 pub const ENEMY_SPEED: f32 = 1.5;

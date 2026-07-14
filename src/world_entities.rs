@@ -3,6 +3,9 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Character;
 
+#[derive(Component)]
+pub struct Enemy;
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MapTileMarker {
     Empty,
