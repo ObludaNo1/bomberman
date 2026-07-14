@@ -3,11 +3,13 @@ use bevy::prelude::*;
 use crate::{
     animation::{
         ANIMATION_FRAME_COUNT, AnimationController, AnimationRenderFrame, MovementDirection,
+        get_death_frame,
     },
     assets::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
+    death::DeathTimer,
     world_entities::{Direction, Enemy},
 };
 
@@ -55,12 +57,40 @@ pub fn get_enemy_animation_frames(
     }
 }
 
+const ENEMY_DEATH_ANIMATION_FRAME_COUNT: usize = 5;
+
+/// Animation frame and its weight for death animation.
+const DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
+    ENEMY_DEATH_ANIMATION_FRAME_COUNT] = [
+    (
+        AnimationRenderFrame::new(EnemyTileType::ZombieDown2, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::ZombieDeath1, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::ZombieDeath2, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::ZombieDeath3, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::ZombieDeath4, false),
+        1,
+    ),
+];
+
 pub fn animate_enemies(
     mut query: Query<
         (
             &mut AnimationController<EnemyTileType>,
             &MovementDirection,
             &MeshMaterial2d<ColouringMaterial>,
+            Option<&DeathTimer>,
         ),
         With<Enemy>,
     >,
@@ -68,14 +98,25 @@ pub fn animate_enemies(
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
-    for (mut animation_controller, movement_direction, material_handle) in query.iter_mut() {
-        animation_controller.update(delta_time, *movement_direction);
-        let current_frame = animation_controller.current_frame();
-        if let Some(material) = materials.get_mut(&material_handle.0) {
-            // Material2d carries per-frame UV/flip uniforms, so animation only updates
-            // the current atlas rect and mirror flag.
-            material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*current_frame.tile()));
-            material.set_flip_x(current_frame.flip_x());
+    for (mut animation_controller, movement_direction, material_handle, death_timer) in
+        query.iter_mut()
+    {
+        if let Some(death_timer) = death_timer {
+            let frame = get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES);
+
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*frame.tile()));
+                material.set_flip_x(frame.flip_x());
+            }
+        } else {
+            animation_controller.update(delta_time, *movement_direction);
+            let current_frame = animation_controller.current_frame();
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                // Material2d carries per-frame UV/flip uniforms, so animation only updates
+                // the current atlas rect and mirror flag.
+                material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*current_frame.tile()));
+                material.set_flip_x(current_frame.flip_x());
+            }
         }
     }
 }

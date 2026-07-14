@@ -20,6 +20,10 @@ tileset_enum!(
     ZombieUp1 => (103, 137),
     ZombieUp2 => (120, 137),
     ZombieUp3 => (137, 137),
+    ZombieDeath1 => (154, 137),
+    ZombieDeath2 => (171, 137),
+    ZombieDeath3 => (188, 137),
+    ZombieDeath4 => (205, 137),
 );
 
 pub fn prepare_tilemap_material(

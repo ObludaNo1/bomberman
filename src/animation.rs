@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::world_entities::Direction;
+use crate::{death::DeathTimer, world_entities::Direction};
 
 const ANIMATION_FRAME_DURATION: f32 = 0.1;
 
@@ -80,4 +80,26 @@ impl<TT> AnimationController<TT> {
     pub fn current_frame(&self) -> &AnimationRenderFrame<TT> {
         &self.current_animation_frames[self.current_frame_index]
     }
+}
+
+pub fn get_death_frame<TT>(
+    death_timer: &DeathTimer,
+    death_animation_frames: &'static [(AnimationRenderFrame<TT>, u32)],
+) -> &'static AnimationRenderFrame<TT> {
+    let fraction = death_timer.fraction();
+    let total_weight = death_animation_frames
+        .iter()
+        .map(|(_, weight)| *weight)
+        .sum::<u32>();
+    let mut accumulated_weight = 0;
+    let mut death_frame_i = 0;
+    let target_weight = (fraction * total_weight as f32).ceil() as u32;
+    for (_, weight) in death_animation_frames {
+        accumulated_weight += weight;
+        if accumulated_weight > target_weight {
+            break;
+        }
+        death_frame_i += 1;
+    }
+    &death_animation_frames[death_frame_i.clamp(0, death_animation_frames.len() - 1)].0
 }

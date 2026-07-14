@@ -3,6 +3,7 @@ use rand::RngExt;
 
 use crate::{
     animation::MovementDirection,
+    death::DeathTimer,
     enemy::EnemyRngGen,
     map::WorldMap,
     position::WorldPosition,
@@ -213,7 +214,7 @@ pub fn move_enemies(
             &mut MovementDirection,
             &mut EnemyMovement,
         ),
-        With<Enemy>,
+        (With<Enemy>, Without<DeathTimer>),
     >,
     collision_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,

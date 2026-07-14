@@ -128,6 +128,17 @@ fn end_game_on_death(
     }
 }
 
+fn despawn_killed_enemies(
+    mut commands: Commands,
+    enemies: Query<(Entity, &DeathTimer), With<Enemy>>,
+) {
+    for (entity, death_timer) in enemies.iter() {
+        if death_timer.0.is_finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub struct DeathPlugin;
 
 impl Plugin for DeathPlugin {
@@ -137,7 +148,11 @@ impl Plugin for DeathPlugin {
             (
                 check_explosion_entity_kills,
                 kill_character_near_enemy,
-                (advance_death_timers, end_game_on_death).chain(),
+                (
+                    advance_death_timers,
+                    (end_game_on_death, despawn_killed_enemies),
+                )
+                    .chain(),
             )
                 .in_set(GameplaySet::Death),
         );

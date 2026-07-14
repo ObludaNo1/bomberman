@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     animation::{
         ANIMATION_FRAME_COUNT, AnimationController, AnimationRenderFrame, MovementDirection,
+        get_death_frame,
     },
     assets::{
         character_tileset::{self, CharacterTileType},
@@ -104,23 +105,7 @@ pub fn animate_character(
         query.iter_mut()
     {
         if let Some(death_timer) = death_timer {
-            let fraction = death_timer.fraction();
-            let total_weight = DEATH_ANIMATION_FRAMES
-                .iter()
-                .map(|(_, weight)| *weight)
-                .sum::<u32>();
-            let mut accumulated_weight = 0;
-            let mut death_frame_i = 0;
-            let target_weight = (fraction * total_weight as f32).ceil() as u32;
-            for (_, weight) in DEATH_ANIMATION_FRAMES {
-                accumulated_weight += weight;
-                if accumulated_weight > target_weight {
-                    break;
-                }
-                death_frame_i += 1;
-            }
-            let frame =
-                DEATH_ANIMATION_FRAMES[death_frame_i.clamp(0, DEATH_ANIMATION_FRAMES.len() - 1)].0;
+            let frame = get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES);
 
             if let Some(material) = materials.get_mut(&material_handle.0) {
                 material.set_uv_rect(character_tileset::TILEMAP.sprite_uv_rect(*frame.tile()));
