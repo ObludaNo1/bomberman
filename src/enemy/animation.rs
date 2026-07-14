@@ -101,22 +101,17 @@ pub fn animate_enemies(
     for (mut animation_controller, movement_direction, material_handle, death_timer) in
         query.iter_mut()
     {
-        if let Some(death_timer) = death_timer {
-            let frame = get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES);
-
-            if let Some(material) = materials.get_mut(&material_handle.0) {
-                material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*frame.tile()));
-                material.set_flip_x(frame.flip_x());
-            }
+        let frame = if let Some(death_timer) = death_timer {
+            get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES)
         } else {
             animation_controller.update(delta_time, *movement_direction);
-            let current_frame = animation_controller.current_frame();
-            if let Some(material) = materials.get_mut(&material_handle.0) {
-                // Material2d carries per-frame UV/flip uniforms, so animation only updates
-                // the current atlas rect and mirror flag.
-                material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*current_frame.tile()));
-                material.set_flip_x(current_frame.flip_x());
-            }
+            animation_controller.current_frame()
+        };
+        if let Some(material) = materials.get_mut(&material_handle.0) {
+            // Material2d carries per-frame UV/flip uniforms, so animation only updates
+            // the current atlas rect and mirror flag.
+            material.set_uv_rect(enemy_tileset::TILEMAP.sprite_uv_rect(*frame.tile()));
+            material.set_flip_x(frame.flip_x());
         }
     }
 }
