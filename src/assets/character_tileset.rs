@@ -18,6 +18,12 @@ tileset_enum!(
     MovingRight1 => (69, 84),
     StandingRight => (86, 84),
     MovingRight2 => (103, 84),
+    Death1 => (120, 84),
+    Death2 => (137, 84),
+    Death3 => (154, 84),
+    Death4 => (171, 84),
+    Empty => (188, 84),
+
 );
 
 pub fn prepare_tilemap_material(

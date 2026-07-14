@@ -9,7 +9,7 @@ const ANIMATION_FRAME_DURATION: f32 = 0.1;
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MovementDirection(pub Option<Direction>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnimationRenderFrame<TT> {
     tile: TT,
     flip_x: bool,

@@ -8,6 +8,7 @@ use crate::{
         character_tileset::{self, CharacterTileType},
         material::ColouringMaterial,
     },
+    death::DeathTimer,
     world_entities::{Character, Direction},
 };
 
@@ -54,12 +55,44 @@ pub fn get_character_animation_frames(
     }
 }
 
+const PLAYER_DEATH_ANIMATION_FRAME_COUNT: usize = 6;
+
+/// Animation frame and its weight for death animation.
+const DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<CharacterTileType>, u32);
+    PLAYER_DEATH_ANIMATION_FRAME_COUNT] = [
+    (
+        AnimationRenderFrame::new(CharacterTileType::StandingDown, false),
+        4,
+    ),
+    (
+        AnimationRenderFrame::new(CharacterTileType::Death1, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(CharacterTileType::Death2, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(CharacterTileType::Death3, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(CharacterTileType::Death4, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(CharacterTileType::Empty, false),
+        3,
+    ),
+];
+
 pub fn animate_character(
     mut query: Query<
         (
             &mut AnimationController<CharacterTileType>,
             &MovementDirection,
             &MeshMaterial2d<ColouringMaterial>,
+            Option<&DeathTimer>,
         ),
         With<Character>,
     >,
@@ -67,15 +100,43 @@ pub fn animate_character(
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
-    for (mut animation_controller, movement_direction, material_handle) in query.iter_mut() {
-        animation_controller.update(delta_time, *movement_direction);
-        let current_frame = animation_controller.current_frame();
-        if let Some(material) = materials.get_mut(&material_handle.0) {
-            // Material2d carries per-frame UV/flip uniforms, so animation only updates
-            // the current atlas rect and mirror flag.
+    for (mut animation_controller, movement_direction, material_handle, death_timer) in
+        query.iter_mut()
+    {
+        if let Some(death_timer) = death_timer {
+            let fraction = death_timer.fraction();
+            let total_weight = DEATH_ANIMATION_FRAMES
+                .iter()
+                .map(|(_, weight)| *weight)
+                .sum::<u32>();
+            let mut accumulated_weight = 0;
+            let mut death_frame_i = 0;
+            let target_weight = (fraction * total_weight as f32).ceil() as u32;
+            for (_, weight) in DEATH_ANIMATION_FRAMES {
+                accumulated_weight += weight;
+                if accumulated_weight > target_weight {
+                    break;
+                }
+                death_frame_i += 1;
+            }
+            let frame =
+                DEATH_ANIMATION_FRAMES[death_frame_i.clamp(0, DEATH_ANIMATION_FRAMES.len() - 1)].0;
 
-            material.set_uv_rect(character_tileset::TILEMAP.sprite_uv_rect(*current_frame.tile()));
-            material.set_flip_x(current_frame.flip_x());
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                material.set_uv_rect(character_tileset::TILEMAP.sprite_uv_rect(*frame.tile()));
+                material.set_flip_x(frame.flip_x());
+            }
+        } else {
+            animation_controller.update(delta_time, *movement_direction);
+            let current_frame = animation_controller.current_frame();
+            if let Some(material) = materials.get_mut(&material_handle.0) {
+                // Material2d carries per-frame UV/flip uniforms, so animation only updates
+                // the current atlas rect and mirror flag.
+
+                material
+                    .set_uv_rect(character_tileset::TILEMAP.sprite_uv_rect(*current_frame.tile()));
+                material.set_flip_x(current_frame.flip_x());
+            }
         }
     }
 }

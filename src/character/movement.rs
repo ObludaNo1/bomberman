@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::{
     animation::MovementDirection,
     controls::Controls,
+    death::DeathTimer,
     map::WorldMap,
     position::WorldPosition,
     world_entities::{Character, Direction},
@@ -142,7 +143,10 @@ fn move_in_step(
 }
 
 pub fn move_character(
-    mut characters: Query<(&mut WorldPosition, &mut MovementDirection), With<Character>>,
+    mut characters: Query<
+        (&mut WorldPosition, &mut MovementDirection),
+        (With<Character>, Without<DeathTimer>),
+    >,
     controls: Res<Controls>,
     time: Res<Time<Fixed>>,
     collision_map: Res<WorldMap>,
