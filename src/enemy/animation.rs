@@ -9,6 +9,7 @@ use crate::{
         material::ColouringMaterial,
     },
     enemy::Enemy,
+    world_entities::Direction,
 };
 
 const ENEMY_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
@@ -44,14 +45,14 @@ const ENEMY_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
 ];
 
 pub fn get_enemy_animation_frames(
-    direction: crate::controls::Direction,
+    direction: Direction,
 ) -> &'static [crate::animation::AnimationRenderFrame<EnemyTileType>;
              crate::animation::ANIMATION_FRAME_COUNT] {
     match direction {
-        crate::controls::Direction::Up => &ENEMY_ANIMATION_FRAMES_MOVING_UP,
-        crate::controls::Direction::Down => &ENEMY_ANIMATION_FRAMES_MOVING_DOWN,
-        crate::controls::Direction::Left => &ENEMY_ANIMATION_FRAMES_MOVING_LEFT,
-        crate::controls::Direction::Right => &ENEMY_ANIMATION_FRAMES_MOVING_RIGHT,
+        Direction::Up => &ENEMY_ANIMATION_FRAMES_MOVING_UP,
+        Direction::Down => &ENEMY_ANIMATION_FRAMES_MOVING_DOWN,
+        Direction::Left => &ENEMY_ANIMATION_FRAMES_MOVING_LEFT,
+        Direction::Right => &ENEMY_ANIMATION_FRAMES_MOVING_RIGHT,
     }
 }
 

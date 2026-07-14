@@ -4,10 +4,10 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    controls::{Controls, Direction},
+    controls::Controls,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::Character,
+    world_entities::{Character, Direction},
 };
 
 pub const CHARACTER_SPEED: f32 = 2.0;

@@ -1,14 +1,6 @@
 use bevy::prelude::*;
 
-use crate::world_entities::GameplaySet;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
+use crate::world_entities::{Direction, GameplaySet};
 
 #[derive(Resource, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Controls {

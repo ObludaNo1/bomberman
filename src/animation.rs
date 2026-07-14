@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::controls::Direction;
+use crate::world_entities::Direction;
 
 const ANIMATION_FRAME_DURATION: f32 = 0.1;
 

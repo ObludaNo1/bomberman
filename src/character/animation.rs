@@ -8,8 +8,7 @@ use crate::{
         character_tileset::{self, CharacterTileType},
         material::ColouringMaterial,
     },
-    controls::Direction,
-    world_entities::Character,
+    world_entities::{Character, Direction},
 };
 
 const CHARACTER_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<CharacterTileType>;
