@@ -7,8 +7,10 @@ use bevy::prelude::*;
 
 use crate::{
     character::{
-        animation::animate_character, movement::move_character, spawn::spawn_character,
-        victory::check_for_win,
+        animation::animate_character,
+        movement::move_character,
+        spawn::spawn_character,
+        victory::{check_for_win, victory_ending},
     },
     game_state::GameState,
     world_entities::{AllEnemiesKilled, GameplaySet},
@@ -22,7 +24,7 @@ impl Plugin for CharacterPlugin {
             .add_systems(FixedUpdate, move_character.in_set(GameplaySet::Movement))
             .add_systems(
                 FixedUpdate,
-                check_for_win
+                (check_for_win, victory_ending)
                     .in_set(GameplaySet::DeathAndVictory)
                     .run_if(resource_exists::<AllEnemiesKilled>),
             )

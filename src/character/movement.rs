@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
+    character::victory::VictoryTimer,
     controls::Controls,
     death::DeathTimer,
     map::WorldMap,
@@ -145,7 +146,7 @@ fn move_in_step(
 pub fn move_character(
     mut characters: Query<
         (&mut WorldPosition, &mut MovementDirection),
-        (With<Character>, Without<DeathTimer>),
+        (With<Character>, Without<DeathTimer>, Without<VictoryTimer>),
     >,
     controls: Res<Controls>,
     time: Res<Time<Fixed>>,
