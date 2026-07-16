@@ -8,7 +8,6 @@ use crate::{
     position::WorldPosition,
     world_entities::{
         AllEnemiesKilled, AllEnemiesKilledEvent, Character, Enemy, GameplaySet, Killable,
-        MapTileMarker,
     },
 };
 
@@ -47,7 +46,7 @@ fn check_kill_from_explosion(world_position: &WorldPosition, world_map: &WorldMa
         world_map
             .get_tile_at_position(&WorldPosition(world_position.0 + offset))
             .and_then(|tile| {
-                (tile.marker == MapTileMarker::Explosion)
+                (tile.marker.has_explosion())
                     .then(|| manhattan_distance(&tile.world_pos().0, &world_position.0))
             })
     })

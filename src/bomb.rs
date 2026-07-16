@@ -20,9 +20,7 @@ use crate::{
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
-    world_entities::{
-        Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity, MapTileMarker,
-    },
+    world_entities::{Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity},
 };
 
 const BOMB_TICKS: u32 = 6;
@@ -189,42 +187,36 @@ fn get_explosion_tiles(
                 let offset = dir_vec * i as f32;
                 let tile_pos = bomb_position.0 + offset;
                 if let Some(tile) = world_map.get_tile_at_position(&tile_pos.into()) {
-                    match tile.marker {
-                        MapTileMarker::Empty
-                        | MapTileMarker::Explosion
-                        | MapTileMarker::Exit
-                        | MapTileMarker::ExplosionWithExit => {
-                            let variant = if i == explosion_radius {
-                                ExplosionPathType::End
-                            } else {
-                                ExplosionPathType::Straight
-                            };
-                            explosion_tiles.push((
-                                tile,
-                                ExplosionTileVariant {
-                                    kind: variant,
-                                    orientation: *dir,
-                                },
-                            ));
-                        }
-                        MapTileMarker::Bomb => {
-                            chained_bombs.push(tile);
-                            break;
-                        }
-                        MapTileMarker::IndestructibleWall => {
-                            break;
-                        }
-                        MapTileMarker::Wall | MapTileMarker::WallWithExit => {
-                            explosion_tiles.push((
-                                tile,
-                                ExplosionTileVariant {
-                                    kind: ExplosionPathType::End,
-                                    orientation: *dir,
-                                },
-                            ));
-                            destroyed_walls.push(tile);
-                            break;
-                        }
+                    if tile.marker.is_floor() {
+                        let variant = if i == explosion_radius {
+                            ExplosionPathType::End
+                        } else {
+                            ExplosionPathType::Straight
+                        };
+                        explosion_tiles.push((
+                            tile,
+                            ExplosionTileVariant {
+                                kind: variant,
+                                orientation: *dir,
+                            },
+                        ));
+                    } else if tile.marker.has_bomb() {
+                        chained_bombs.push(tile);
+                        break;
+                    } else if tile.marker.is_basic_wall() {
+                        explosion_tiles.push((
+                            tile,
+                            ExplosionTileVariant {
+                                kind: ExplosionPathType::End,
+                                orientation: *dir,
+                            },
+                        ));
+                        destroyed_walls.push(tile);
+                        // Explosion stops at walls
+                        break;
+                    } else {
+                        // Explosion stops at indestructible walls
+                        break;
                     }
                 } else {
                     break;

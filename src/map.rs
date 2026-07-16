@@ -68,22 +68,10 @@ impl WorldMap {
         }
         let index = y * self.width() as usize + x;
         if let Some(tile) = self.tiles.get_mut(index) {
-            *tile = match (value, *tile) {
-                (MapTileSetter::Explosion, MapTileMarker::WallWithExit) => {
-                    MapTileMarker::ExplosionWithExit
-                }
-                // TODO refactor this case, either this map or system updating explosions should
-                // know how to handle this case, not partially in both.
-                (MapTileSetter::Explosion, MapTileMarker::Wall) => MapTileMarker::Wall,
-                (MapTileSetter::Explosion, _) => MapTileMarker::Explosion,
-                (MapTileSetter::Bomb, _) => MapTileMarker::Bomb,
-                (
-                    MapTileSetter::Clear,
-                    MapTileMarker::WallWithExit
-                    | MapTileMarker::ExplosionWithExit
-                    | MapTileMarker::Exit,
-                ) => MapTileMarker::Exit,
-                (MapTileSetter::Clear, _) => MapTileMarker::Empty,
+            match value {
+                MapTileSetter::Explosion => tile.set_explosion(true),
+                MapTileSetter::Bomb => tile.set_bomb(true),
+                MapTileSetter::Clear => tile.set_explosion(false).set_bomb(false).remove_wall(),
             };
         }
     }
@@ -97,7 +85,7 @@ impl WorldMap {
             .iter()
             .enumerate()
             .filter_map(move |(index, &marker)| {
-                if marker == MapTileMarker::Empty {
+                if marker.is_floor() {
                     let x = index % self.width() as usize;
                     let y = index / self.width() as usize;
                     (!Self::is_starting_area(x, y)).then(|| CollisionMapTile { x, y, marker })
@@ -200,9 +188,9 @@ fn setup_map(
             };
 
             map_tile_markers.push(match tile_marker {
-                Tile::IndestructibleWall => MapTileMarker::IndestructibleWall,
-                Tile::Wall => MapTileMarker::Wall,
-                Tile::Floor => MapTileMarker::Empty,
+                Tile::IndestructibleWall => MapTileMarker::indestructible_wall(),
+                Tile::Wall => MapTileMarker::basic_wall(),
+                Tile::Floor => MapTileMarker::floor(),
             });
 
             let world_position = WorldPosition(Vec2 {
@@ -254,7 +242,7 @@ fn setup_map(
     let wall_indices = map_tile_markers
         .iter()
         .enumerate()
-        .filter_map(|(i, tile)| (*tile == MapTileMarker::Wall).then_some(i))
+        .filter_map(|(i, tile)| tile.is_basic_wall().then_some(i))
         .collect::<Vec<_>>();
     let gate_index = if wall_indices.len() > 0 {
         wall_indices
@@ -264,7 +252,9 @@ fn setup_map(
         None
     };
     if let Some(gate_index) = gate_index {
-        map_tile_markers[gate_index] = MapTileMarker::WallWithExit;
+        if let Some(wall) = map_tile_markers.get_mut(gate_index) {
+            *wall = wall.with_exit()
+        };
         let world_position = WorldPosition(Vec2 {
             x: (gate_index % MAP_WIDTH) as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
             y: (gate_index / MAP_WIDTH) as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,

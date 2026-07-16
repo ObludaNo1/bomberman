@@ -1,44 +1,13 @@
+mod map_tile_marker;
+
 use bevy::prelude::*;
+pub use map_tile_marker::*;
 
 #[derive(Component)]
 pub struct Character;
 
 #[derive(Component)]
 pub struct Enemy;
-
-// TODO this has become insufficient to describe state of tiles. Rewrite this into a struct or bit
-// flags.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MapTileMarker {
-    Empty,
-    Wall,
-    WallWithExit,
-    IndestructibleWall,
-    Bomb,
-    Explosion,
-    ExplosionWithExit,
-    Exit,
-}
-
-impl MapTileMarker {
-    pub fn is_walkable(&self) -> bool {
-        use MapTileMarker as M;
-        match self {
-            M::Empty => true,
-            M::Explosion => true,
-            M::ExplosionWithExit => true,
-            M::Bomb => false,
-            M::Wall => false,
-            M::WallWithExit => false,
-            M::IndestructibleWall => false,
-            M::Exit => true,
-        }
-    }
-
-    pub fn is_obstacle(&self) -> bool {
-        !self.is_walkable()
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Direction {

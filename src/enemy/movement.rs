@@ -7,7 +7,7 @@ use crate::{
     enemy::EnemyRngGen,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Direction, Enemy, MapTileMarker},
+    world_entities::{Direction, Enemy},
 };
 
 pub const ENEMY_SPEED: f32 = 1.5;
@@ -134,7 +134,7 @@ fn choose_next_tile(
 
         // We can keep moving in the same direction
         if let Some(next_tile) = next_tile
-            && next_tile.marker == MapTileMarker::Empty
+            && next_tile.marker.is_ai_walkable()
         {
             return (next_tile.x, next_tile.y);
         };
@@ -155,7 +155,7 @@ fn move_enemy(
     let desired_tile =
         collision_map.get_tile(movement.desired_position.0, movement.desired_position.1);
     if let Some(desired_tile) = desired_tile
-        && desired_tile.marker == MapTileMarker::Empty
+        && desired_tile.marker.is_ai_walkable()
     {
         let mut movement_dir_unnormalized = desired_tile.world_pos().0 - position.0;
         let distance = movement_dir_unnormalized.length();
