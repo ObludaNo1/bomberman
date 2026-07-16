@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 
 use crate::{
-    assets::{map_tileset, material::ColouringMaterial},
+    assets::{
+        map_tileset::{self, MapTilesetHandles},
+        material::ColouringMaterial,
+    },
     game_state::GameState,
     position::WorldPosition,
     rendering::MeshHandle,
@@ -132,10 +135,16 @@ fn setup_map(
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
-    let (basic_tilemap_handles, non_standard_tilemap_handles) =
-        map_tileset::prepare_tilemap_material(&asset_server, &mut material);
+    let MapTilesetHandles {
+        floor: floor_tilemap_handles,
+        basic: basic_tilemap_handles,
+        non_standard: non_standard_tilemap_handles,
+    } = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
     let mut map_tile_markers = Vec::new();
 
+    let Some(floor_colouring_material) = material.get(&floor_tilemap_handles.0) else {
+        return;
+    };
     let Some(basic_colouring_material) = material.get(&basic_tilemap_handles.0) else {
         return;
     };
@@ -148,7 +157,7 @@ fn setup_map(
     indestructible_wall_material.set_uv_rect(
         map_tileset::BASIC_TILEMAP.sprite_uv_rect(map_tileset::MapTileType::IndestructibleWall),
     );
-    let mut floor_material = basic_colouring_material.clone();
+    let mut floor_material = floor_colouring_material.clone();
     floor_material
         .set_uv_rect(map_tileset::BASIC_TILEMAP.sprite_uv_rect(map_tileset::MapTileType::Floor));
 
