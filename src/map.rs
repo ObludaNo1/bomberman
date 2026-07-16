@@ -72,6 +72,9 @@ impl WorldMap {
                 (MapTileSetter::Explosion, MapTileMarker::WallWithExit) => {
                     MapTileMarker::ExplosionWithExit
                 }
+                // TODO refactor this case, either this map or system updating explosions should
+                // know how to handle this case, not partially in both.
+                (MapTileSetter::Explosion, MapTileMarker::Wall) => MapTileMarker::Wall,
                 (MapTileSetter::Explosion, _) => MapTileMarker::Explosion,
                 (MapTileSetter::Bomb, _) => MapTileMarker::Bomb,
                 (
