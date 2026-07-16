@@ -12,16 +12,17 @@ use crate::{
     assets::{
         TilesetHandles, bomb_explosion_tileset,
         bomb_tileset::{self, BombTileType},
-        map_tileset::{self, MapTileType},
         material::{ColouringMaterial, ExplosionMaterial},
     },
     bomb::animation::{animate_bomb, animate_exploding_walls, animate_explosion},
     controls::Controls,
-    map::{CollisionMapTile, MapTile, WorldMap},
+    map::{CollisionMapTile, MapTile, MapTileSetter, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
-    world_entities::{Bomb, Character, Explosion, GameplaySet, InGameEntity, MapTileMarker},
+    world_entities::{
+        Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity, MapTileMarker,
+    },
 };
 
 const BOMB_TICKS: u32 = 6;
@@ -114,7 +115,7 @@ fn spawn_bomb_when_requested(
                 ExplosionRadius::default(),
                 RenderScale(1.0),
             ));
-            world_map.set_tile(tile.x, tile.y, MapTileMarker::Bomb);
+            world_map.set_tile(tile.x, tile.y, MapTileSetter::Bomb);
         }
     }
 }
@@ -189,7 +190,10 @@ fn get_explosion_tiles(
                 let tile_pos = bomb_position.0 + offset;
                 if let Some(tile) = world_map.get_tile_at_position(&tile_pos.into()) {
                     match tile.marker {
-                        MapTileMarker::Empty | MapTileMarker::Explosion => {
+                        MapTileMarker::Empty
+                        | MapTileMarker::Explosion
+                        | MapTileMarker::Exit
+                        | MapTileMarker::ExplosionWithExit => {
                             let variant = if i == explosion_radius {
                                 ExplosionPathType::End
                             } else {
@@ -210,7 +214,14 @@ fn get_explosion_tiles(
                         MapTileMarker::IndestructibleWall => {
                             break;
                         }
-                        MapTileMarker::Wall => {
+                        MapTileMarker::Wall | MapTileMarker::WallWithExit => {
+                            explosion_tiles.push((
+                                tile,
+                                ExplosionTileVariant {
+                                    kind: ExplosionPathType::End,
+                                    orientation: *dir,
+                                },
+                            ));
                             destroyed_walls.push(tile);
                             break;
                         }
@@ -235,7 +246,10 @@ fn explode_expired_bombs(
         (Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius),
         (With<Bomb>, Without<MapTile>),
     >,
-    map_tiles: Query<(Entity, &WorldPosition), (With<MapTile>, Without<Bomb>)>,
+    wall_tiles: Query<
+        (Entity, &WorldPosition),
+        (With<MapTile>, With<DestructibleWall>, Without<Bomb>),
+    >,
     time: Res<Time<Fixed>>,
 ) {
     let delta_time = time.delta();
@@ -275,7 +289,7 @@ fn explode_expired_bombs(
         walls_to_destroy.extend(destroyed_walls.iter().map(|tile| (tile.x, tile.y)));
 
         for (tile, variant) in explosions {
-            world_map.set_tile(tile.x, tile.y, MapTileMarker::Explosion);
+            world_map.set_tile(tile.x, tile.y, MapTileSetter::Explosion);
 
             let Some(mut explosion_material) = explosion_materials
                 .get(&bomb_assets.bomb_explosion_handles.0)
@@ -308,7 +322,7 @@ fn explode_expired_bombs(
         }
     }
 
-    for (entity, world_pos) in map_tiles {
+    for (entity, world_pos) in wall_tiles {
         let (x, y) = world_map.get_position_from_world(world_pos);
         if walls_to_destroy.contains(&(x, y)) {
             commands.entity(entity).insert((
@@ -331,7 +345,7 @@ fn remove_expired_explosions(
         if bomb_timing.is_finished() {
             commands.entity(entity).despawn();
             if let Some(tile) = world_map.get_tile_at_position(position) {
-                world_map.set_tile(tile.x, tile.y, MapTileMarker::Empty);
+                world_map.set_tile(tile.x, tile.y, MapTileSetter::Clear);
             }
         }
     }
@@ -367,31 +381,17 @@ fn prepare_bomb_assets(
 fn advance_exploding_walls(
     mut commands: Commands,
     mut world_map: ResMut<WorldMap>,
-    mut query: Query<
-        (
-            Entity,
-            &WorldPosition,
-            &mut BombTiming,
-            &MeshMaterial2d<ColouringMaterial>,
-        ),
-        With<ExplodingWall>,
-    >,
+    mut query: Query<(Entity, &WorldPosition, &mut BombTiming), With<ExplodingWall>>,
     time: Res<Time<Fixed>>,
-    mut materials: ResMut<Assets<ColouringMaterial>>,
 ) {
     let delta_time = time.delta();
-    for (entity, position, mut bomb_timing, material_handle) in query.iter_mut() {
+    for (entity, position, mut bomb_timing) in query.iter_mut() {
         bomb_timing.update(delta_time);
         if bomb_timing.is_finished() {
-            commands
-                .entity(entity)
-                .remove::<(ExplodingWall, BombTiming)>();
+            commands.entity(entity).despawn();
 
-            if let Some(material) = materials.get_mut(&material_handle.0) {
-                material.set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(MapTileType::Floor));
-            }
             if let Some(tile) = world_map.get_tile_at_position(position) {
-                world_map.set_tile(tile.x, tile.y, MapTileMarker::Empty);
+                world_map.set_tile(tile.x, tile.y, MapTileSetter::Clear);
             }
         }
     }

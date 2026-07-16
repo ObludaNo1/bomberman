@@ -6,13 +6,18 @@ pub struct Character;
 #[derive(Component)]
 pub struct Enemy;
 
+// TODO this has become insufficient to describe state of tiles. Rewrite this into a struct or bit
+// flags.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MapTileMarker {
     Empty,
     Wall,
+    WallWithExit,
     IndestructibleWall,
     Bomb,
     Explosion,
+    ExplosionWithExit,
+    Exit,
 }
 
 impl MapTileMarker {
@@ -21,9 +26,12 @@ impl MapTileMarker {
         match self {
             M::Empty => true,
             M::Explosion => true,
+            M::ExplosionWithExit => true,
             M::Bomb => false,
             M::Wall => false,
+            M::WallWithExit => false,
             M::IndestructibleWall => false,
+            M::Exit => true,
         }
     }
 
@@ -80,6 +88,9 @@ pub struct InGameEntity;
 
 #[derive(Component)]
 pub struct Killable;
+
+#[derive(Component)]
+pub struct DestructibleWall;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum GameplaySet {

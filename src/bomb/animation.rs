@@ -122,7 +122,7 @@ pub fn animate_exploding_walls(
         };
 
         if let Some(material) = materials.get_mut(&material_handle.0) {
-            material.set_uv_rect(map_tileset::TILEMAP.sprite_uv_rect(tile));
+            material.set_uv_rect(map_tileset::BASIC_TILEMAP.sprite_uv_rect(tile));
         }
     }
 }

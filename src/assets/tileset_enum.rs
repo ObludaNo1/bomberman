@@ -18,9 +18,9 @@ macro_rules! tileset_enum {
 
             #[derive(Debug, Clone, PartialEq, Eq, Hash)]
             pub struct [<$enum_name Tileset>] {
-                pub atlas_size: UVec2,
+                pub atlas_size: bevy::math::UVec2,
                 /// The position of the top-left corner of each sprite in the atlas, in pixels.
-                sprites: [UVec2; [<$enum_name TileType>]::COUNT],
+                sprites: [bevy::math::UVec2; [<$enum_name TileType>]::COUNT],
             }
 
             impl [<$enum_name Tileset>] {
@@ -40,7 +40,7 @@ macro_rules! tileset_enum {
             }
 
             pub const TILEMAP: [<$enum_name Tileset>] = [<$enum_name Tileset>] {
-                atlas_size: UVec2::new($size_x, $size_y),
+                atlas_size: bevy::math::UVec2::new($size_x, $size_y),
                 sprites: [
                     $(
                         bevy::math::UVec2::new($x, $y),
