@@ -6,7 +6,10 @@ use crate::{
     game_state::GameState,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, Enemy, GameplaySet, Killable, MapTileMarker},
+    world_entities::{
+        AllEnemiesKilled, AllEnemiesKilledEvent, Character, Enemy, GameplaySet, Killable,
+        MapTileMarker,
+    },
 };
 
 const KILL_DISTANCE_THRESHOLD: f32 = 0.75;
@@ -139,6 +142,17 @@ fn despawn_killed_enemies(
     }
 }
 
+fn check_alive_enemies(
+    mut commands: Commands,
+    all_enemies_killed: Option<Res<AllEnemiesKilled>>,
+    enemies: Query<(), With<Enemy>>,
+) {
+    if all_enemies_killed.is_none() && enemies.is_empty() {
+        commands.trigger(AllEnemiesKilledEvent);
+        commands.insert_resource(AllEnemiesKilled);
+    }
+}
+
 pub struct DeathPlugin;
 
 impl Plugin for DeathPlugin {
@@ -151,10 +165,11 @@ impl Plugin for DeathPlugin {
                 (
                     advance_death_timers,
                     (end_game_on_death, despawn_killed_enemies),
+                    check_alive_enemies,
                 )
                     .chain(),
             )
-                .in_set(GameplaySet::Death),
+                .in_set(GameplaySet::DeathAndVictory),
         );
     }
 }

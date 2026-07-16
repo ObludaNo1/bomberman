@@ -64,7 +64,7 @@ fn main() {
                 GameplaySet::Movement,
                 GameplaySet::Bomb,
                 GameplaySet::Explosion,
-                GameplaySet::Death,
+                GameplaySet::DeathAndVictory,
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),

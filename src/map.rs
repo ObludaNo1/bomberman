@@ -6,7 +6,10 @@ use crate::{
     game_state::GameState,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{DestructibleWall, InGameEntity, MapTileMarker, SpawnSystemSet},
+    world_entities::{
+        AllEnemiesKilledEvent, DestructibleWall, ExitGate, InGameEntity, MapTileMarker,
+        SpawnSystemSet,
+    },
 };
 
 pub const MAP_WIDTH: usize = 19;
@@ -121,6 +124,9 @@ impl CollisionMapTile {
 
 #[derive(Component)]
 pub struct MapTile;
+
+#[derive(Component)]
+struct ClosedGateTile;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tile {
@@ -263,6 +269,7 @@ fn setup_map(
         commands.spawn((
             MapTile,
             InGameEntity,
+            ClosedGateTile,
             Mesh2d(mesh_handle.0.clone()),
             MeshMaterial2d(material.add(closed_gate_material)),
             world_position,
@@ -271,6 +278,7 @@ fn setup_map(
         commands.spawn((
             MapTile,
             InGameEntity,
+            ExitGate,
             Mesh2d(mesh_handle.0.clone()),
             MeshMaterial2d(material.add(open_gate_material)),
             world_position,
@@ -283,11 +291,21 @@ fn setup_map(
     });
 }
 
+fn on_all_enemies_killed(
+    _: On<AllEnemiesKilledEvent>,
+    mut commands: Commands,
+    closed_gate_tiles: Query<Entity, With<ClosedGateTile>>,
+) {
+    for entity in closed_gate_tiles {
+        commands.entity(entity).despawn();
+    }
+}
+
 pub struct Map;
 
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.add_observer(on_all_enemies_killed).add_systems(
             OnEnter(GameState::Playing),
             setup_map.in_set(SpawnSystemSet::CreateMap),
         );

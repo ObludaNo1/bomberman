@@ -92,13 +92,22 @@ pub struct Killable;
 #[derive(Component)]
 pub struct DestructibleWall;
 
+#[derive(Component)]
+pub struct ExitGate;
+
+#[derive(Event)]
+pub struct AllEnemiesKilledEvent;
+
+#[derive(Resource)]
+pub struct AllEnemiesKilled;
+
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum GameplaySet {
     Controls,
     Movement,
     Bomb,
     Explosion,
-    Death,
+    DeathAndVictory,
     Animation,
 }
 
