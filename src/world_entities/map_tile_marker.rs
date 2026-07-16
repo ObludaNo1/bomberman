@@ -69,6 +69,10 @@ impl MapTileMarker {
         self.is_walkable() && !self.has_explosion
     }
 
+    pub fn tile_base(&self) -> MarkerBase {
+        self.base
+    }
+
     pub fn has_bomb(&self) -> bool {
         self.has_bomb
     }

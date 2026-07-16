@@ -20,7 +20,9 @@ use crate::{
     position::WorldPosition,
     rendering::MeshHandle,
     util::RenderScale,
-    world_entities::{Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity},
+    world_entities::{
+        Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity, MarkerBase,
+    },
 };
 
 const BOMB_TICKS: u32 = 6;
@@ -187,36 +189,40 @@ fn get_explosion_tiles(
                 let offset = dir_vec * i as f32;
                 let tile_pos = bomb_position.0 + offset;
                 if let Some(tile) = world_map.get_tile_at_position(&tile_pos.into()) {
-                    if tile.marker.is_floor() {
-                        let variant = if i == explosion_radius {
-                            ExplosionPathType::End
-                        } else {
-                            ExplosionPathType::Straight
-                        };
-                        explosion_tiles.push((
-                            tile,
-                            ExplosionTileVariant {
-                                kind: variant,
-                                orientation: *dir,
-                            },
-                        ));
-                    } else if tile.marker.has_bomb() {
+                    if tile.marker.has_bomb() {
                         chained_bombs.push(tile);
-                        break;
-                    } else if tile.marker.is_basic_wall() {
-                        explosion_tiles.push((
-                            tile,
-                            ExplosionTileVariant {
-                                kind: ExplosionPathType::End,
-                                orientation: *dir,
-                            },
-                        ));
-                        destroyed_walls.push(tile);
-                        // Explosion stops at walls
-                        break;
-                    } else {
-                        // Explosion stops at indestructible walls
-                        break;
+                    }
+                    match tile.marker.tile_base() {
+                        MarkerBase::Floor => {
+                            let variant = if i == explosion_radius {
+                                ExplosionPathType::End
+                            } else {
+                                ExplosionPathType::Straight
+                            };
+                            explosion_tiles.push((
+                                tile,
+                                ExplosionTileVariant {
+                                    kind: variant,
+                                    orientation: *dir,
+                                },
+                            ));
+                        }
+                        MarkerBase::BasicWall => {
+                            explosion_tiles.push((
+                                tile,
+                                ExplosionTileVariant {
+                                    kind: ExplosionPathType::End,
+                                    orientation: *dir,
+                                },
+                            ));
+                            destroyed_walls.push(tile);
+                            // Explosion stops at walls
+                            break;
+                        }
+                        MarkerBase::IndestructibleWall => {
+                            // Explosion stops at indestructible walls
+                            break;
+                        }
                     }
                 } else {
                     break;
@@ -252,19 +258,20 @@ fn explode_expired_bombs(
 
     let query = query.as_readonly();
 
-    // Hold all bombs in a map for quick lookup
-    let mut bombs_map = HashMap::new();
+    // Hold all bombs that are still ticking and could potentially chain explode
+    let mut unexploded_bombs = HashMap::new();
     // Hold all bombs that explode this tick
     let mut bombs_to_explode_vec = Vec::new();
     for (entity, world_pos, bomb_timing, explosion_radius) in query {
-        // Collect all bombs since they may chain-explode
-        bombs_map.insert(
-            world_map.get_position_from_world(world_pos),
-            (entity, world_pos, explosion_radius),
-        );
         if bomb_timing.is_finished() {
             // Collect all bombs that explode this tick
             bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
+        } else {
+            // Collect all bombs which could potentially chain explode
+            unexploded_bombs.insert(
+                world_map.get_position_from_world(world_pos),
+                (entity, world_pos, explosion_radius),
+            );
         }
     }
 
@@ -275,7 +282,7 @@ fn explode_expired_bombs(
         i += 1;
 
         commands.entity(*entity).despawn();
-        let (explosions, bombs_to_explode, destroyed_walls) =
+        let (explosions, chain_explode_bombs, destroyed_walls) =
             get_explosion_tiles(&world_map, world_pos, explosion_radius.0);
 
         walls_to_destroy.extend(destroyed_walls.iter().map(|tile| (tile.x, tile.y)));
@@ -305,9 +312,9 @@ fn explode_expired_bombs(
             ));
         }
 
-        for bomb_to_explode in bombs_to_explode {
+        for bomb_to_explode in chain_explode_bombs {
             if let Some((entity, world_pos, explosion_radius)) =
-                bombs_map.remove(&(bomb_to_explode.x, bomb_to_explode.y))
+                unexploded_bombs.remove(&(bomb_to_explode.x, bomb_to_explode.y))
             {
                 bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
             }
