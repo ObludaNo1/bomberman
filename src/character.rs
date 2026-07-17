@@ -42,6 +42,9 @@ impl Plugin for CharacterPlugin {
                     .in_set(GameplaySet::DeathAndVictory)
                     .run_if(resource_exists::<AllEnemiesKilled>),
             )
-            .add_systems(PostUpdate, animate_character.in_set(GameplaySet::Animation));
+            .add_systems(
+                PostUpdate,
+                animate_character.in_set(GameplaySet::AnimationAndSound),
+            );
     }
 }

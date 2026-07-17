@@ -7,6 +7,7 @@ use crate::{
     death::DeathTimer,
     game_state::GameState,
     position::WorldPosition,
+    sound::EffectKind,
     util::RenderScale,
     world_entities::{Character, Direction, ExitGate, MovementSpeed},
 };
@@ -40,6 +41,7 @@ pub fn check_for_win(
 }
 
 pub fn victory_ending(
+    mut commands: Commands,
     mut next_state: ResMut<NextState<GameState>>,
     mut characters: Query<
         (
@@ -78,6 +80,9 @@ pub fn victory_ending(
         } else {
             world_position.0 = gate_pos.0;
             let remaining_step_duration = delta_time.as_secs_f32() * (1.0 - len / step_distance);
+            if victory_timer.0.elapsed() == Duration::ZERO {
+                commands.trigger(EffectKind::Victory);
+            }
             victory_timer.tick(Duration::from_secs_f32(remaining_step_duration));
             animation_dir.0 = Some(Direction::Up);
             render_scale.0 = 1.0 - victory_timer.fraction();

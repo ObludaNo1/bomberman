@@ -1,0 +1,104 @@
+use std::time::Duration;
+
+use bevy::prelude::*;
+
+use crate::{
+    assets::audio::{AudioAssets, load_audio_assets},
+    world_entities::GameplaySet,
+};
+
+#[derive(Event, Clone, Copy)]
+pub enum EffectKind {
+    Victory,
+    CharacterDeath,
+    EnemyDeath,
+    PickUp,
+    Explosion,
+}
+
+#[derive(Component, Clone)]
+struct DelayedAudio {
+    pub delay: Timer,
+    pub player: AudioPlayer,
+    pub settings: PlaybackSettings,
+}
+
+fn on_sound_trigger(
+    trigger: On<EffectKind>,
+    audio_assets: Res<AudioAssets>,
+    mut commands: Commands,
+) {
+    let single_effect = match *trigger.event() {
+        EffectKind::Explosion => {
+            let handles = audio_assets.explosions.clone();
+
+            let bomb_explosion = [
+                (handles.2.clone(), 150),
+                (handles.2.clone(), 250),
+                (handles.2.clone(), 400),
+                (handles.2.clone(), 550),
+                (handles.2.clone(), 700),
+                (handles.0.clone(), 000),
+                (handles.0.clone(), 700),
+                (handles.1.clone(), 400),
+            ];
+
+            for (handle, delay) in bomb_explosion {
+                commands.spawn(DelayedAudio {
+                    delay: Timer::new(Duration::from_millis(delay), TimerMode::Once),
+                    player: AudioPlayer::new(handle.clone()),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+            }
+            return;
+        }
+        EffectKind::EnemyDeath => {
+            commands.spawn(DelayedAudio {
+                delay: Timer::new(Duration::from_millis(1500), TimerMode::Once),
+                player: AudioPlayer::new(audio_assets.enemy_death.clone()),
+                settings: PlaybackSettings::DESPAWN,
+            });
+            return;
+        }
+        EffectKind::Victory => audio_assets.victory.clone(),
+        EffectKind::CharacterDeath => {
+            commands.spawn(DelayedAudio {
+                delay: Timer::new(Duration::from_millis(1500), TimerMode::Once),
+                player: AudioPlayer::new(audio_assets.character_death.clone()),
+                settings: PlaybackSettings::DESPAWN,
+            });
+            return;
+        }
+        EffectKind::PickUp => audio_assets.pick_up.clone(),
+    };
+
+    commands.spawn((AudioPlayer::new(single_effect), PlaybackSettings::DESPAWN));
+}
+
+fn play_delayed_effects(
+    mut commands: Commands,
+    mut delayed_audios: Query<(Entity, &mut DelayedAudio)>,
+    time: Res<Time>,
+) {
+    let delta = time.delta();
+    for (entity, mut delayed_audio) in delayed_audios.iter_mut() {
+        delayed_audio.delay.tick(delta);
+        if delayed_audio.delay.is_finished() {
+            commands.spawn((delayed_audio.player.clone(), delayed_audio.settings));
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub struct SoundPlugin;
+
+impl Plugin for SoundPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(PreStartup, load_audio_assets)
+            .add_observer(on_sound_trigger)
+            .add_systems(
+                Update,
+                play_delayed_effects.in_set(GameplaySet::AnimationAndSound),
+            );
+    }
+}

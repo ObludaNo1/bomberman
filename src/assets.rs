@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod bomb_explosion_tileset;
 pub mod bomb_tileset;
 pub mod character_tileset;

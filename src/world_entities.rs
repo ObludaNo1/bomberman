@@ -82,7 +82,7 @@ pub enum GameplaySet {
     Bomb,
     Explosion,
     DeathAndVictory,
-    Animation,
+    AnimationAndSound,
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]

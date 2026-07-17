@@ -6,6 +6,7 @@ use crate::{
     game_state::GameState,
     map::WorldMap,
     position::WorldPosition,
+    sound::EffectKind,
     world_entities::{
         AllEnemiesKilled, AllEnemiesKilledEvent, Character, Enemy, GameplaySet, Killable,
     },
@@ -73,6 +74,7 @@ fn check_explosion_entity_kills(
             commands
                 .entity(entity)
                 .insert(DeathTimer::new(ENEMY_DEATH_DURATION));
+            commands.trigger(EffectKind::EnemyDeath);
         }
     }
     for (entity, world_position) in character {
@@ -80,6 +82,7 @@ fn check_explosion_entity_kills(
             commands
                 .entity(entity)
                 .insert(DeathTimer::new(CHARACTER_DEATH_DURATION));
+            commands.trigger(EffectKind::CharacterDeath);
         }
     }
 }
@@ -96,6 +99,7 @@ fn kill_character_near_enemy(
                 commands
                     .entity(entity)
                     .insert(DeathTimer::new(CHARACTER_DEATH_DURATION));
+                commands.trigger(EffectKind::CharacterDeath);
             }
         }
     }

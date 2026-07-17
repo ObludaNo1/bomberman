@@ -7,6 +7,7 @@ use crate::{
     character::CharacterRng,
     map::{MapTileSetter, WorldMap},
     position::WorldPosition,
+    sound::EffectKind,
     world_entities::{
         BombCount, BombRange, BonusType, Character, MovementMultiplier, SpeedUpEnemies,
     },
@@ -42,6 +43,7 @@ pub fn pick_up_bonuses(
                 commands.entity(bonus_entity).despawn();
                 let pos = map.get_position_from_world(bonus_pos);
                 map.set_tile(pos.0, pos.1, MapTileSetter::PickupBonus);
+                commands.trigger(EffectKind::PickUp);
             }
         }
     }

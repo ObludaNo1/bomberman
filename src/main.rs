@@ -9,6 +9,7 @@ mod game_state;
 mod map;
 mod position;
 mod rendering;
+mod sound;
 mod util;
 mod world_entities;
 
@@ -54,6 +55,7 @@ fn main() {
         .add_plugins(bomb::BombPlugin)
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
+        .add_plugins(sound::SoundPlugin)
         .configure_sets(
             PreUpdate,
             GameplaySet::Controls.run_if(in_state(GameState::Playing)),
@@ -71,7 +73,7 @@ fn main() {
         )
         .configure_sets(
             PostUpdate,
-            GameplaySet::Animation.run_if(in_state(GameState::Playing)),
+            GameplaySet::AnimationAndSound.run_if(in_state(GameState::Playing)),
         )
         .configure_sets(
             OnEnter(GameState::Playing),

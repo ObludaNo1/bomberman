@@ -19,6 +19,7 @@ use crate::{
     map::{CollisionMapTile, MapTile, MapTileSetter, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
+    sound::EffectKind,
     util::RenderScale,
     world_entities::{
         Bomb, BombCount, BombRange, Character, DestructibleWall, Explosion, GameplaySet,
@@ -335,6 +336,10 @@ fn explode_expired_bombs(
             ));
         }
     }
+
+    if bombs_to_explode_vec.len() > 0 {
+        commands.trigger(EffectKind::Explosion);
+    }
 }
 
 fn remove_expired_explosions(
@@ -422,7 +427,7 @@ impl Plugin for BombPlugin {
             .add_systems(
                 PostUpdate,
                 (animate_bomb, animate_explosion, animate_exploding_walls)
-                    .in_set(GameplaySet::Animation),
+                    .in_set(GameplaySet::AnimationAndSound),
             );
     }
 }

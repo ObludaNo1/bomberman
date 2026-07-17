@@ -95,6 +95,9 @@ impl Plugin for EnemyPlugin {
                 FixedUpdate,
                 (move_enemies, tick_enemy_temporal_bonuses).in_set(GameplaySet::Movement),
             )
-            .add_systems(Update, animate_enemies.in_set(GameplaySet::Animation));
+            .add_systems(
+                Update,
+                animate_enemies.in_set(GameplaySet::AnimationAndSound),
+            );
     }
 }
