@@ -42,7 +42,7 @@ pub fn pick_up_bonuses(
                 }
                 commands.entity(bonus_entity).despawn();
                 let pos = map.get_position_from_world(bonus_pos);
-                map.set_tile(pos.0, pos.1, MapTileSetter::PickupBonus);
+                map.set_tile(pos.0, pos.1, MapTileSetter::RemoveBonus);
                 commands.trigger(EffectKind::PickUp);
             }
         }

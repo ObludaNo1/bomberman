@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{audio::Volume, prelude::*};
 
 use crate::{
     assets::audio::{AudioAssets, load_audio_assets},
@@ -21,6 +21,10 @@ struct DelayedAudio {
     pub delay: Timer,
     pub player: AudioPlayer,
     pub settings: PlaybackSettings,
+}
+
+fn default_playback_settings() -> PlaybackSettings {
+    PlaybackSettings::DESPAWN.with_volume(Volume::Decibels(-18.0))
 }
 
 fn on_sound_trigger(
@@ -47,7 +51,7 @@ fn on_sound_trigger(
                 commands.spawn(DelayedAudio {
                     delay: Timer::new(Duration::from_millis(delay), TimerMode::Once),
                     player: AudioPlayer::new(handle.clone()),
-                    settings: PlaybackSettings::DESPAWN,
+                    settings: default_playback_settings(),
                 });
             }
             return;
@@ -56,7 +60,7 @@ fn on_sound_trigger(
             commands.spawn(DelayedAudio {
                 delay: Timer::new(Duration::from_millis(1500), TimerMode::Once),
                 player: AudioPlayer::new(audio_assets.enemy_death.clone()),
-                settings: PlaybackSettings::DESPAWN,
+                settings: default_playback_settings(),
             });
             return;
         }
@@ -65,14 +69,14 @@ fn on_sound_trigger(
             commands.spawn(DelayedAudio {
                 delay: Timer::new(Duration::from_millis(1500), TimerMode::Once),
                 player: AudioPlayer::new(audio_assets.character_death.clone()),
-                settings: PlaybackSettings::DESPAWN,
+                settings: default_playback_settings(),
             });
             return;
         }
         EffectKind::PickUp => audio_assets.pick_up.clone(),
     };
 
-    commands.spawn((AudioPlayer::new(single_effect), PlaybackSettings::DESPAWN));
+    commands.spawn((AudioPlayer::new(single_effect), default_playback_settings()));
 }
 
 fn play_delayed_effects(

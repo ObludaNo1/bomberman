@@ -63,7 +63,7 @@ pub enum MapTileSetter {
     Clear,
     Bomb,
     Explosion,
-    PickupBonus,
+    RemoveBonus,
 }
 
 impl WorldMap {
@@ -107,12 +107,14 @@ impl WorldMap {
             match value {
                 MapTileSetter::Explosion => tile.set_explosion(true),
                 MapTileSetter::Bomb => tile.set_bomb(true),
-                MapTileSetter::Clear => tile
-                    .set_explosion(false)
-                    .set_bomb(false)
-                    .remove_wall()
-                    .clear_bonus(),
-                MapTileSetter::PickupBonus => tile.clear_bonus(),
+                MapTileSetter::Clear => {
+                    if tile.is_basic_wall() {
+                        tile.set_explosion(false).set_bomb(false).remove_wall()
+                    } else {
+                        tile.set_explosion(false).set_bomb(false).clear_bonus()
+                    }
+                }
+                MapTileSetter::RemoveBonus => tile.clear_bonus(),
             };
         }
     }
@@ -311,7 +313,8 @@ fn setup_map(
 
     if wall_indices.len() > 0 {
         let index = wall_indices[0];
-        map_tile_markers.index_mut(index).with_exit();
+        let marker = map_tile_markers.index_mut(index);
+        *marker = marker.with_exit();
         let world_position = index_to_world_position(index);
         commands.spawn((
             MapTile,
@@ -343,9 +346,8 @@ fn setup_map(
     for (i, bonus_type) in wall_indices.into_iter().skip(1).zip(bonuses) {
         let world_position = index_to_world_position(i);
         let bonus_type_component = map_power_up(bonus_type);
-        map_tile_markers
-            .index_mut(i)
-            .with_bonus(bonus_type_component);
+        let marker = map_tile_markers.index_mut(i);
+        *marker = marker.with_bonus(bonus_type_component);
         let mut bonuses_material = bonuses_material.clone();
         bonuses_material.set_uv_rect(map_tileset::BONUSES_TILEMAP.sprite_uv_rect(bonus_type));
         commands.spawn((

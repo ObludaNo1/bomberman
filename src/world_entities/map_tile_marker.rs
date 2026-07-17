@@ -84,6 +84,10 @@ impl MapTileMarker {
         self
     }
 
+    pub fn bonus(&self) -> Option<BonusType> {
+        self.bonus
+    }
+
     pub fn is_walkable(&self) -> bool {
         self.base == MarkerBase::Floor && !self.has_bomb
     }
