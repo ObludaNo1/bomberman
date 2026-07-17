@@ -9,8 +9,10 @@ use crate::{
     character::animation::get_character_animation_frames,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{BombCount, BombRange, Character, InGameEntity, Killable},
+    world_entities::{BombCount, BombRange, Character, InGameEntity, Killable, MovementSpeed},
 };
+
+const CHARACTER_SPEED: f32 = 2.0;
 
 pub fn spawn_character(
     mut commands: Commands,
@@ -39,6 +41,7 @@ pub fn spawn_character(
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         AnimationController::<CharacterTileType>::new(get_character_animation_frames),
         MovementDirection(None),
+        MovementSpeed(CHARACTER_SPEED),
         BombRange::default(),
         BombCount::default(),
     ));

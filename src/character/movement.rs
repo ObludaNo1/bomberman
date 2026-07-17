@@ -9,15 +9,11 @@ use crate::{
     death::DeathTimer,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, Direction},
+    world_entities::{Character, Direction, MovementSpeed},
 };
 
-pub const CHARACTER_SPEED: f32 = 2.0;
-const MAX_STEP_DISTANCE: f32 = 1.0 / 64.0;
 const BORDER_PASSING: f32 = 0.6666;
 const BOMB_WALKING_DISTANCE: f32 = 0.75;
-
-const MAX_DELTA_TIME: f32 = MAX_STEP_DISTANCE / CHARACTER_SPEED;
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
 
@@ -43,10 +39,11 @@ fn move_in_step(
     character_position: &mut WorldPosition,
     animation_dir: &mut MovementDirection,
     direction: Direction,
+    movement_speed: &MovementSpeed,
     delta_secs: f32,
     collision_map: &WorldMap,
 ) {
-    let step_distance = CHARACTER_SPEED * delta_secs;
+    let step_distance = movement_speed.0 * delta_secs;
     // There is a small trick. We check tile left of the character. The position is shifted by 0.5
     // to account for character size. Then we also need to check slightly behind that tile -
     // `step_distance` is added to check against the tile we are moving into. Then it is multiplied
@@ -145,7 +142,7 @@ fn move_in_step(
 
 pub fn move_character(
     mut characters: Query<
-        (&mut WorldPosition, &mut MovementDirection),
+        (&mut WorldPosition, &mut MovementDirection, &MovementSpeed),
         (With<Character>, Without<DeathTimer>, Without<VictoryTimer>),
     >,
     controls: Res<Controls>,
@@ -154,18 +151,14 @@ pub fn move_character(
 ) {
     let delta_time = time.delta_secs();
 
-    for (mut world_position, mut animation_dir) in characters.iter_mut() {
+    for (mut world_position, mut animation_dir, movement_speed) in characters.iter_mut() {
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {
-            let mut elapsed = 0.0;
-            while elapsed < delta_time {
-                let step = (delta_time - elapsed).min(MAX_DELTA_TIME);
-                elapsed += step;
-                move_in_step(
-                    &mut world_position, &mut animation_dir, direction, step, &collision_map,
-                );
-            }
+            move_in_step(
+                &mut world_position, &mut animation_dir, direction, movement_speed, delta_time,
+                &collision_map,
+            )
         } else {
             animation_dir.0 = None;
         }

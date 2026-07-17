@@ -64,6 +64,9 @@ pub struct DestructibleWall;
 #[derive(Component)]
 pub struct ExitGate;
 
+#[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
+pub struct MovementSpeed(pub f32);
+
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BombRange(pub u32);
 

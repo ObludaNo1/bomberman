@@ -7,10 +7,8 @@ use crate::{
     enemy::EnemyRngGen,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Direction, Enemy},
+    world_entities::{Direction, Enemy, MovementSpeed},
 };
-
-pub const ENEMY_SPEED: f32 = 1.5;
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
 
@@ -147,11 +145,12 @@ fn move_enemy(
     position: &mut WorldPosition,
     animation: &mut MovementDirection,
     movement: &mut EnemyMovement,
+    speed: &MovementSpeed,
     collision_map: &WorldMap,
     delta_secs: f32,
     enemy_rng_gen: &mut EnemyRngGen,
 ) {
-    let mut step_distance = ENEMY_SPEED * delta_secs;
+    let mut step_distance = speed.0 * delta_secs;
     let desired_tile =
         collision_map.get_tile(movement.desired_position.0, movement.desired_position.1);
     if let Some(desired_tile) = desired_tile
@@ -213,6 +212,7 @@ pub fn move_enemies(
             &mut WorldPosition,
             &mut MovementDirection,
             &mut EnemyMovement,
+            &MovementSpeed,
         ),
         (With<Enemy>, Without<DeathTimer>),
     >,
@@ -222,9 +222,9 @@ pub fn move_enemies(
 ) {
     let delta_secs = time.delta_secs();
 
-    for (mut position, mut animation_dir, mut movement) in enemies.iter_mut() {
+    for (mut position, mut animation_dir, mut movement, speed) in enemies.iter_mut() {
         move_enemy(
-            &mut position, &mut animation_dir, &mut movement, &collision_map, delta_secs,
+            &mut position, &mut animation_dir, &mut movement, speed, &collision_map, delta_secs,
             &mut enemy_rng_gen,
         );
     }

@@ -4,12 +4,11 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    character::movement::CHARACTER_SPEED,
     death::DeathTimer,
     game_state::GameState,
     position::WorldPosition,
     util::RenderScale,
-    world_entities::{Character, Direction, ExitGate},
+    world_entities::{Character, Direction, ExitGate, MovementSpeed},
 };
 
 const WINNING_TRIGGER_DISTANCE: f32 = 0.5;
@@ -48,6 +47,7 @@ pub fn victory_ending(
             &mut MovementDirection,
             &mut VictoryTimer,
             &mut RenderScale,
+            &MovementSpeed,
         ),
         (With<Character>, Without<DeathTimer>),
     >,
@@ -60,12 +60,17 @@ pub fn victory_ending(
         return;
     };
 
-    for (mut world_position, mut animation_dir, mut victory_timer, mut render_scale) in
-        characters.iter_mut()
+    for (
+        mut world_position,
+        mut animation_dir,
+        mut victory_timer,
+        mut render_scale,
+        movement_speed,
+    ) in characters.iter_mut()
     {
         let dir = gate_pos.0 - world_position.0;
         let len = dir.length();
-        let step_distance = delta_time.as_secs_f32() * CHARACTER_SPEED;
+        let step_distance = delta_time.as_secs_f32() * movement_speed.0;
         if step_distance <= len {
             let norm = dir.normalize_or_zero();
             world_position.0 += norm * step_distance;

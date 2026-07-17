@@ -17,7 +17,7 @@ use crate::{
     game_state::GameState,
     map::WorldMap,
     rendering::MeshHandle,
-    world_entities::{Enemy, GameplaySet, InGameEntity, Killable, SpawnSystemSet},
+    world_entities::{Enemy, GameplaySet, InGameEntity, Killable, MovementSpeed, SpawnSystemSet},
 };
 
 const ENEMY_RNG_SEED: u64 = 1234567890;
@@ -59,6 +59,7 @@ fn spawn_enemies(
             AnimationController::<EnemyTileType>::new(get_enemy_animation_frames),
             EnemyMovement::new((tile.x, tile.y)),
             MovementDirection(None),
+            MovementSpeed(1.5),
         ));
     }
 }
