@@ -1,6 +1,8 @@
+mod bonuses;
 mod map_tile_marker;
 
 use bevy::prelude::*;
+pub use bonuses::*;
 pub use map_tile_marker::*;
 
 #[derive(Component)]
@@ -66,27 +68,6 @@ pub struct ExitGate;
 
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
 pub struct MovementSpeed(pub f32);
-
-#[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BombRange(pub u32);
-
-impl Default for BombRange {
-    fn default() -> Self {
-        BombRange(1)
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BombCount {
-    pub current: u32,
-    pub max: u32,
-}
-
-impl Default for BombCount {
-    fn default() -> Self {
-        BombCount { current: 0, max: 1 }
-    }
-}
 
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;

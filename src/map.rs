@@ -26,7 +26,7 @@ const WALL_DENSITY: f64 = 0.60;
 const BONUSES: [(PowerUpTileType, u8); PowerUpTileType::COUNT as usize] = [
     (PowerUpTileType::Range, 5),
     (PowerUpTileType::BombCount, 5),
-    (PowerUpTileType::Negative, 0),
+    (PowerUpTileType::Negative, 5),
     (PowerUpTileType::ExtraLife, 0),
     (PowerUpTileType::Hook, 0),
     (PowerUpTileType::BombKick, 0),

@@ -1,6 +1,8 @@
 mod animation;
 mod movement;
 
+use std::time::Duration;
+
 use bevy::prelude::*;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 
@@ -12,12 +14,15 @@ use crate::{
     },
     enemy::{
         animation::{animate_enemies, get_enemy_animation_frames},
-        movement::{EnemyMovement, move_enemies},
+        movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
     },
     game_state::GameState,
     map::WorldMap,
     rendering::MeshHandle,
-    world_entities::{Enemy, GameplaySet, InGameEntity, Killable, MovementSpeed, SpawnSystemSet},
+    world_entities::{
+        Enemy, GameplaySet, InGameEntity, Killable, MovementMultiplier, MovementSpeed,
+        SpawnSystemSet, SpeedUpEnemies,
+    },
 };
 
 const ENEMY_RNG_SEED: u64 = 1234567890;
@@ -64,6 +69,18 @@ fn spawn_enemies(
     }
 }
 
+fn on_enemy_speed_up(
+    _trigger: On<SpeedUpEnemies>,
+    mut commands: Commands,
+    enemies: Query<Entity, With<Enemy>>,
+) {
+    for entity in enemies {
+        commands
+            .entity(entity)
+            .insert(MovementMultiplier::new(Duration::from_secs(10), 2.0));
+    }
+}
+
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
@@ -73,7 +90,11 @@ impl Plugin for EnemyPlugin {
                 OnEnter(GameState::Playing),
                 spawn_enemies.in_set(SpawnSystemSet::SpawnEnemies),
             )
-            .add_systems(FixedUpdate, move_enemies.in_set(GameplaySet::Movement))
+            .add_observer(on_enemy_speed_up)
+            .add_systems(
+                FixedUpdate,
+                (move_enemies, tick_enemy_temporal_bonuses).in_set(GameplaySet::Movement),
+            )
             .add_systems(Update, animate_enemies.in_set(GameplaySet::Animation));
     }
 }

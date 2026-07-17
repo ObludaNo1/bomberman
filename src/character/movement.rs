@@ -9,7 +9,7 @@ use crate::{
     death::DeathTimer,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, Direction, MovementSpeed},
+    world_entities::{Character, Direction, MovementMultiplier, MovementSpeed},
 };
 
 const BORDER_PASSING: f32 = 0.6666;
@@ -40,10 +40,12 @@ fn move_in_step(
     animation_dir: &mut MovementDirection,
     direction: Direction,
     movement_speed: &MovementSpeed,
+    movement_multiplier: Option<&MovementMultiplier>,
     delta_secs: f32,
     collision_map: &WorldMap,
 ) {
-    let step_distance = movement_speed.0 * delta_secs;
+    let step_distance =
+        movement_speed.0 * delta_secs * movement_multiplier.map(|mm| mm.multiplier).unwrap_or(1.0);
     // There is a small trick. We check tile left of the character. The position is shifted by 0.5
     // to account for character size. Then we also need to check slightly behind that tile -
     // `step_distance` is added to check against the tile we are moving into. Then it is multiplied
@@ -142,7 +144,12 @@ fn move_in_step(
 
 pub fn move_character(
     mut characters: Query<
-        (&mut WorldPosition, &mut MovementDirection, &MovementSpeed),
+        (
+            &mut WorldPosition,
+            &mut MovementDirection,
+            &MovementSpeed,
+            Option<&MovementMultiplier>,
+        ),
         (With<Character>, Without<DeathTimer>, Without<VictoryTimer>),
     >,
     controls: Res<Controls>,
@@ -151,13 +158,15 @@ pub fn move_character(
 ) {
     let delta_time = time.delta_secs();
 
-    for (mut world_position, mut animation_dir, movement_speed) in characters.iter_mut() {
+    for (mut world_position, mut animation_dir, movement_speed, movement_multiplier) in
+        characters.iter_mut()
+    {
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {
             move_in_step(
-                &mut world_position, &mut animation_dir, direction, movement_speed, delta_time,
-                &collision_map,
+                &mut world_position, &mut animation_dir, direction, movement_speed,
+                movement_multiplier, delta_time, &collision_map,
             )
         } else {
             animation_dir.0 = None;

@@ -7,7 +7,7 @@ use crate::{
     enemy::EnemyRngGen,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Direction, Enemy, MovementSpeed},
+    world_entities::{Direction, Enemy, MovementMultiplier, MovementSpeed},
 };
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
@@ -146,11 +146,13 @@ fn move_enemy(
     animation: &mut MovementDirection,
     movement: &mut EnemyMovement,
     speed: &MovementSpeed,
+    movement_multiplier: Option<&MovementMultiplier>,
     collision_map: &WorldMap,
     delta_secs: f32,
     enemy_rng_gen: &mut EnemyRngGen,
 ) {
-    let mut step_distance = speed.0 * delta_secs;
+    let mut step_distance =
+        speed.0 * delta_secs * movement_multiplier.map(|mm| mm.multiplier).unwrap_or(1.0);
     let desired_tile =
         collision_map.get_tile(movement.desired_position.0, movement.desired_position.1);
     if let Some(desired_tile) = desired_tile
@@ -213,6 +215,7 @@ pub fn move_enemies(
             &mut MovementDirection,
             &mut EnemyMovement,
             &MovementSpeed,
+            Option<&MovementMultiplier>,
         ),
         (With<Enemy>, Without<DeathTimer>),
     >,
@@ -222,10 +225,25 @@ pub fn move_enemies(
 ) {
     let delta_secs = time.delta_secs();
 
-    for (mut position, mut animation_dir, mut movement, speed) in enemies.iter_mut() {
+    for (mut position, mut animation_dir, mut movement, speed, movement_multiplier) in
+        enemies.iter_mut()
+    {
         move_enemy(
-            &mut position, &mut animation_dir, &mut movement, speed, &collision_map, delta_secs,
-            &mut enemy_rng_gen,
+            &mut position, &mut animation_dir, &mut movement, speed, movement_multiplier,
+            &collision_map, delta_secs, &mut enemy_rng_gen,
         );
+    }
+}
+
+pub fn tick_enemy_temporal_bonuses(
+    mut commands: Commands,
+    mut enemies: Query<(Entity, &mut MovementMultiplier), With<Enemy>>,
+    time: Res<Time<Fixed>>,
+) {
+    for (entity, mut movement_multiplier) in enemies.iter_mut() {
+        movement_multiplier.timer.tick(time.delta());
+        if movement_multiplier.timer.is_finished() {
+            commands.entity(entity).remove::<MovementMultiplier>();
+        }
     }
 }
