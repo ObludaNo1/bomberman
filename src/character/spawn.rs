@@ -9,7 +9,7 @@ use crate::{
     character::animation::get_character_animation_frames,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{Character, InGameEntity, Killable},
+    world_entities::{BombCount, BombRange, Character, InGameEntity, Killable},
 };
 
 pub fn spawn_character(
@@ -39,5 +39,7 @@ pub fn spawn_character(
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         AnimationController::<CharacterTileType>::new(get_character_animation_frames),
         MovementDirection(None),
+        BombRange::default(),
+        BombCount::default(),
     ));
 }

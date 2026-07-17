@@ -21,7 +21,8 @@ use crate::{
     rendering::MeshHandle,
     util::RenderScale,
     world_entities::{
-        Bomb, Character, DestructibleWall, Explosion, GameplaySet, InGameEntity, MarkerBase,
+        Bomb, BombCount, BombRange, Character, DestructibleWall, Explosion, GameplaySet,
+        InGameEntity, MarkerBase,
     },
 };
 
@@ -68,21 +69,12 @@ impl BombTiming {
     }
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-struct ExplosionRadius(pub u32);
-
-impl Default for ExplosionRadius {
-    fn default() -> Self {
-        Self(2)
-    }
-}
-
 #[derive(Component)]
 struct ExplodingWall;
 
 fn spawn_bomb_when_requested(
     mut commands: Commands,
-    characters: Query<&WorldPosition, With<Character>>,
+    mut characters: Query<(&WorldPosition, &BombRange, &mut BombCount), With<Character>>,
     mut world_map: ResMut<WorldMap>,
     controls: Res<Controls>,
     bomb_assets: Res<BombAssets>,
@@ -100,22 +92,25 @@ fn spawn_bomb_when_requested(
     bomb_material.set_flip_x(false);
     let bomb_material = materials.add(bomb_material);
 
-    for character_position in characters.iter() {
+    for (character_position, bomb_range, mut bomb_count) in characters.iter_mut() {
         if let Some(tile) = world_map.get_tile_at_position(character_position)
             && tile.marker.is_walkable()
         {
-            commands.spawn((
-                Bomb,
-                InGameEntity,
-                tile.world_pos(),
-                Mesh2d(mesh_handle.0.clone()),
-                MeshMaterial2d(bomb_material.clone()),
-                Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-                BombTiming::new(BOMB_TICKS, BOMB_TICK_DURATION),
-                ExplosionRadius::default(),
-                RenderScale(1.0),
-            ));
-            world_map.set_tile(tile.x, tile.y, MapTileSetter::Bomb);
+            if bomb_count.current < bomb_count.max {
+                bomb_count.current += 1;
+                commands.spawn((
+                    Bomb,
+                    InGameEntity,
+                    tile.world_pos(),
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(bomb_material.clone()),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+                    BombTiming::new(BOMB_TICKS, BOMB_TICK_DURATION),
+                    RenderScale(1.0),
+                    *bomb_range,
+                ));
+                world_map.set_tile(tile.x, tile.y, MapTileSetter::Bomb);
+            }
         }
     }
 }
@@ -241,12 +236,18 @@ fn explode_expired_bombs(
     mesh_handle: Res<MeshHandle>,
     bomb_assets: Res<BombAssets>,
     mut query: Query<
-        (Entity, &WorldPosition, &mut BombTiming, &ExplosionRadius),
-        (With<Bomb>, Without<MapTile>),
+        (Entity, &WorldPosition, &mut BombTiming, &BombRange),
+        (With<Bomb>, Without<MapTile>, Without<Character>),
     >,
+    mut players: Query<&mut BombCount, (With<Character>, Without<Bomb>)>,
     wall_tiles: Query<
         (Entity, &WorldPosition),
-        (With<MapTile>, With<DestructibleWall>, Without<Bomb>),
+        (
+            With<MapTile>,
+            With<DestructibleWall>,
+            Without<Bomb>,
+            Without<Character>,
+        ),
     >,
     time: Res<Time<Fixed>>,
 ) {
@@ -319,6 +320,10 @@ fn explode_expired_bombs(
                 bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
             }
         }
+    }
+
+    for mut bomb_count in players.iter_mut() {
+        bomb_count.current -= bombs_to_explode_vec.len() as u32;
     }
 
     for (entity, world_pos) in wall_tiles {

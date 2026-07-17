@@ -8,11 +8,27 @@ pub enum MarkerBase {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BonusType {
+    Range,
+    BombCount,
+    Negative,
+    ExtraLife,
+    Hook,
+    BombKick,
+    Detonator,
+    Turbo,
+    LineBomb,
+    DoubleBomb,
+    Max,
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MapTileMarker {
     base: MarkerBase,
     has_bomb: bool,
     has_explosion: bool,
     has_exit: bool,
+    bonus: Option<BonusType>,
 }
 
 impl MapTileMarker {
@@ -22,6 +38,7 @@ impl MapTileMarker {
             has_bomb: false,
             has_explosion: false,
             has_exit: false,
+            bonus: None,
         }
     }
 
@@ -54,6 +71,16 @@ impl MapTileMarker {
 
     pub fn with_exit(mut self) -> Self {
         self.has_exit = true;
+        self
+    }
+
+    pub fn with_bonus(mut self, bonus: BonusType) -> Self {
+        self.bonus = Some(bonus);
+        self
+    }
+
+    pub fn clear_bonus(&mut self) -> &mut Self {
+        self.bonus = None;
         self
     }
 

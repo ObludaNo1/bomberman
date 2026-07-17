@@ -1,16 +1,18 @@
+use std::ops::IndexMut;
+
 use bevy::prelude::*;
-use rand::{RngExt, SeedableRng, rngs::StdRng};
+use rand::{RngExt, SeedableRng, rngs::StdRng, seq::SliceRandom};
 
 use crate::{
     assets::{
-        map_tileset::{self, MapTilesetHandles},
+        map_tileset::{self, MapTilesetHandles, PowerUpTileType},
         material::ColouringMaterial,
     },
     game_state::GameState,
     position::WorldPosition,
     rendering::MeshHandle,
     world_entities::{
-        AllEnemiesKilledEvent, DestructibleWall, ExitGate, InGameEntity, MapTileMarker,
+        AllEnemiesKilledEvent, BonusType, DestructibleWall, ExitGate, InGameEntity, MapTileMarker,
         SpawnSystemSet,
     },
 };
@@ -20,6 +22,36 @@ pub const MAP_HEIGHT: usize = 15;
 
 const RND_SEED: u64 = 123456789;
 const WALL_DENSITY: f64 = 0.60;
+
+const BONUSES: [(PowerUpTileType, u8); PowerUpTileType::COUNT as usize] = [
+    (PowerUpTileType::Range, 5),
+    (PowerUpTileType::BombCount, 5),
+    (PowerUpTileType::Negative, 0),
+    (PowerUpTileType::ExtraLife, 0),
+    (PowerUpTileType::Hook, 0),
+    (PowerUpTileType::BombKick, 0),
+    (PowerUpTileType::Detonator, 0),
+    (PowerUpTileType::Turbo, 0),
+    (PowerUpTileType::LineBomb, 0),
+    (PowerUpTileType::DoubleBomb, 0),
+    (PowerUpTileType::Max, 0),
+];
+
+fn map_power_up(power_up_tile_type: PowerUpTileType) -> BonusType {
+    match power_up_tile_type {
+        PowerUpTileType::Range => BonusType::Range,
+        PowerUpTileType::BombCount => BonusType::BombCount,
+        PowerUpTileType::Negative => BonusType::Negative,
+        PowerUpTileType::ExtraLife => BonusType::ExtraLife,
+        PowerUpTileType::Hook => BonusType::Hook,
+        PowerUpTileType::BombKick => BonusType::BombKick,
+        PowerUpTileType::Detonator => BonusType::Detonator,
+        PowerUpTileType::Turbo => BonusType::Turbo,
+        PowerUpTileType::LineBomb => BonusType::LineBomb,
+        PowerUpTileType::DoubleBomb => BonusType::DoubleBomb,
+        PowerUpTileType::Max => BonusType::Max,
+    }
+}
 
 #[derive(Resource, Debug, Clone, PartialEq, Eq)]
 pub struct WorldMap {
@@ -31,6 +63,7 @@ pub enum MapTileSetter {
     Clear,
     Bomb,
     Explosion,
+    PickupBonus,
 }
 
 impl WorldMap {
@@ -74,7 +107,12 @@ impl WorldMap {
             match value {
                 MapTileSetter::Explosion => tile.set_explosion(true),
                 MapTileSetter::Bomb => tile.set_bomb(true),
-                MapTileSetter::Clear => tile.set_explosion(false).set_bomb(false).remove_wall(),
+                MapTileSetter::Clear => tile
+                    .set_explosion(false)
+                    .set_bomb(false)
+                    .remove_wall()
+                    .clear_bonus(),
+                MapTileSetter::PickupBonus => tile.clear_bonus(),
             };
         }
     }
@@ -129,6 +167,13 @@ enum Tile {
     Floor,
 }
 
+fn index_to_world_position(index: usize) -> WorldPosition {
+    WorldPosition(Vec2 {
+        x: (index % MAP_WIDTH) as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
+        y: (index / MAP_WIDTH) as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,
+    })
+}
+
 fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -139,6 +184,7 @@ fn setup_map(
         floor: floor_tilemap_handles,
         basic: basic_tilemap_handles,
         non_standard: non_standard_tilemap_handles,
+        bonuses: bonuses_tilemap_handles,
     } = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
     let mut map_tile_markers = Vec::new();
 
@@ -150,6 +196,9 @@ fn setup_map(
     };
     let Some(non_standard_colouring_material) = material.get(&non_standard_tilemap_handles.0)
     else {
+        return;
+    };
+    let Some(bonuses_colouring_material) = material.get(&bonuses_tilemap_handles.0) else {
         return;
     };
 
@@ -171,6 +220,10 @@ fn setup_map(
     let mut open_gate_material = non_standard_colouring_material.clone();
     open_gate_material.set_uv_rect(
         map_tileset::NON_STANDARD_TILEMAP.sprite_uv_rect(map_tileset::MapGateTileType::Open),
+    );
+    let mut bonuses_material = bonuses_colouring_material.clone();
+    bonuses_material.set_uv_rect(
+        map_tileset::BONUSES_TILEMAP.sprite_uv_rect(map_tileset::PowerUpTileType::Range),
     );
 
     let mut rng_gen = StdRng::seed_from_u64(RND_SEED);
@@ -248,26 +301,18 @@ fn setup_map(
         }
     }
 
-    let wall_indices = map_tile_markers
+    // Insert all bonuses behind walls
+    let mut wall_indices = map_tile_markers
         .iter()
         .enumerate()
         .filter_map(|(i, tile)| tile.is_basic_wall().then_some(i))
         .collect::<Vec<_>>();
-    let gate_index = if wall_indices.len() > 0 {
-        wall_indices
-            .get(rng_gen.random_range(0..wall_indices.len()))
-            .copied()
-    } else {
-        None
-    };
-    if let Some(gate_index) = gate_index {
-        if let Some(wall) = map_tile_markers.get_mut(gate_index) {
-            *wall = wall.with_exit()
-        };
-        let world_position = WorldPosition(Vec2 {
-            x: (gate_index % MAP_WIDTH) as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
-            y: (gate_index / MAP_WIDTH) as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,
-        });
+    wall_indices.shuffle(&mut rng_gen);
+
+    if wall_indices.len() > 0 {
+        let index = wall_indices[0];
+        map_tile_markers.index_mut(index).with_exit();
+        let world_position = index_to_world_position(index);
         commands.spawn((
             MapTile,
             InGameEntity,
@@ -287,6 +332,32 @@ fn setup_map(
             Transform::from_xyz(0.0, 0.0, 0.02),
         ));
     };
+
+    let mut bonuses = Vec::new();
+    for (bonus_type, count) in BONUSES {
+        for _ in 0..count {
+            bonuses.push(bonus_type);
+        }
+    }
+    bonuses.shuffle(&mut rng_gen);
+    for (i, bonus_type) in wall_indices.into_iter().skip(1).zip(bonuses) {
+        let world_position = index_to_world_position(i);
+        let bonus_type_component = map_power_up(bonus_type);
+        map_tile_markers
+            .index_mut(i)
+            .with_bonus(bonus_type_component);
+        let mut bonuses_material = bonuses_material.clone();
+        bonuses_material.set_uv_rect(map_tileset::BONUSES_TILEMAP.sprite_uv_rect(bonus_type));
+        commands.spawn((
+            MapTile,
+            InGameEntity,
+            bonus_type_component,
+            Mesh2d(mesh_handle.0.clone()),
+            MeshMaterial2d(material.add(bonuses_material)),
+            world_position,
+            Transform::from_xyz(0.0, 0.0, 0.02),
+        ));
+    }
 
     commands.insert_resource(WorldMap {
         tiles: map_tile_markers,

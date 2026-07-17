@@ -13,7 +13,7 @@ macro_rules! tileset_enum {
             tileset_enum!(@build_enum $enum_name [] [] ; $($variant),*);
 
             impl [<$enum_name TileType>] {
-                const COUNT: usize = tileset_enum!(@count $($variant),*);
+                pub const COUNT: usize = tileset_enum!(@count $($variant),*);
             }
 
             #[derive(Debug, Clone, PartialEq, Eq, Hash)]
