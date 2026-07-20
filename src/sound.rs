@@ -51,7 +51,7 @@ fn on_sound_trigger(
                 commands.spawn(DelayedAudio {
                     delay: Timer::new(Duration::from_millis(delay), TimerMode::Once),
                     player: AudioPlayer::new(handle.clone()),
-                    settings: default_playback_settings(),
+                    settings: default_playback_settings().with_volume(Volume::Decibels(-36.0)),
                 });
             }
             return;
