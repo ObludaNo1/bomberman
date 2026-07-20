@@ -6,16 +6,17 @@ use crate::{
     animation::MovementDirection,
     death::DeathTimer,
     game_state::GameState,
+    map::WorldMap,
     position::WorldPosition,
     sound::EffectKind,
     util::RenderScale,
-    world_entities::{Character, Direction, ExitGate, MovementSpeed},
+    world_entities::{Character, Direction, MovementSpeed},
 };
 
 const WINNING_TRIGGER_DISTANCE: f32 = 0.5;
 const VICTORY_ANIMATION_DURATION: Duration = Duration::from_secs(3);
 
-fn manhattan_distance(pos1: &WorldPosition, pos2: &WorldPosition) -> f32 {
+fn manhattan_distance(pos1: WorldPosition, pos2: WorldPosition) -> f32 {
     (pos1.x - pos2.x).abs() + (pos1.y - pos2.y).abs()
 }
 
@@ -25,11 +26,13 @@ pub struct VictoryTimer(pub Timer);
 pub fn check_for_win(
     mut commands: Commands,
     characters: Query<(Entity, &WorldPosition), (With<Character>, Without<VictoryTimer>)>,
-    exit_gates: Query<&WorldPosition, With<ExitGate>>,
+    world_map: Res<WorldMap>,
 ) {
     for (entity, player_pos) in characters {
-        for gate_pos in exit_gates {
-            if manhattan_distance(player_pos, gate_pos) < WINNING_TRIGGER_DISTANCE {
+        if let Some(open_exit_position) = world_map.open_exit_position() {
+            if manhattan_distance(*player_pos, open_exit_position.to_world_position())
+                < WINNING_TRIGGER_DISTANCE
+            {
                 commands.entity(entity).insert((
                     VictoryTimer(Timer::new(VICTORY_ANIMATION_DURATION, TimerMode::Once)),
                     RenderScale(1.0),
@@ -53,14 +56,15 @@ pub fn victory_ending(
         ),
         (With<Character>, Without<DeathTimer>),
     >,
-    gate: Query<&WorldPosition, (Without<Character>, With<ExitGate>)>,
+    world_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,
 ) {
     let delta_time = time.delta();
 
-    let Ok(gate_pos) = gate.single() else {
+    let Some(gate_pos) = world_map.open_exit_position() else {
         return;
     };
+    let gate_pos = gate_pos.to_world_position();
 
     for (
         mut world_position,

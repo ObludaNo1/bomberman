@@ -2,6 +2,7 @@ mod animation;
 mod assets;
 mod bomb;
 mod character;
+mod constants;
 mod controls;
 mod death;
 mod enemy;
@@ -64,12 +65,16 @@ fn main() {
             FixedUpdate,
             (
                 GameplaySet::Movement,
-                GameplaySet::Bomb,
-                GameplaySet::Explosion,
+                GameplaySet::BombPlacement,
+                GameplaySet::MapTickUpdate,
                 GameplaySet::DeathAndVictory,
             )
                 .chain()
                 .run_if(in_state(GameState::Playing)),
+        )
+        .configure_sets(
+            Update,
+            GameplaySet::MapToVisualsSync.run_if(in_state(GameState::Playing)),
         )
         .configure_sets(
             PostUpdate,

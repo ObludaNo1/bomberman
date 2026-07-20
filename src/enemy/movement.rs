@@ -6,7 +6,7 @@ use crate::{
     death::DeathTimer,
     enemy::EnemyRngGen,
     map::WorldMap,
-    position::WorldPosition,
+    position::{TilePosition, WorldPosition},
     world_entities::{Direction, Enemy, MovementMultiplier, MovementSpeed},
 };
 
@@ -18,14 +18,14 @@ const CHANCE_TO_TURN: f64 = 0.4;
 pub struct EnemyMovement {
     /// Desired position is always defined. If the enemy is not moving, it will be the same as its
     /// current position.
-    pub desired_position: (usize, usize),
+    pub desired_position: TilePosition,
     /// A hint for choosing the next tile. With this enemy prefer to continue moving in the same
     /// direction or turn left/right. If None, the enemy will choose a random direction.
     pub last_direction: Option<Direction>,
 }
 
 impl EnemyMovement {
-    pub fn new(desired_position: (usize, usize)) -> Self {
+    pub fn new(desired_position: TilePosition) -> Self {
         Self {
             desired_position,
             last_direction: None,
@@ -105,40 +105,40 @@ fn random_direction(rng_gen: &mut EnemyRngGen) -> Vec2 {
 
 fn choose_next_tile(
     current_dir: &Vec2,
-    position: &(usize, usize),
-    collision_map: &WorldMap,
+    position: TilePosition,
+    world_map: &WorldMap,
     rng_gen: &mut EnemyRngGen,
-) -> (usize, usize) {
+) -> TilePosition {
     let current_dir = current_dir
         .try_normalize()
         .map(keep_larger_component)
         .unwrap_or_else(|| random_direction(rng_gen));
 
-    let (position_x, position_y) = (position.0 as isize, position.1 as isize);
+    let (position_x, position_y) = (position.0.x as i32, position.0.y as i32);
 
     for tile_choice in next_tile_choices(rng_gen) {
         let next_dir = tile_choice.to_direction(current_dir);
 
         let (next_tile_dir_x, next_tile_dir_y) = if next_dir.x.abs() > next_dir.y.abs() {
-            (next_dir.x.signum() as isize, 0)
+            (next_dir.x.signum() as i32, 0)
         } else {
-            (0, next_dir.y.signum() as isize)
+            (0, next_dir.y.signum() as i32)
         };
         let next_tile = (position_x + next_tile_dir_x, position_y + next_tile_dir_y);
         // Negative coordinates could only happen if the enemy is as the edge of the map, which
         // should be impossible, since there are indestructible walls there.
-        let next_tile = (next_tile.0 as usize, next_tile.1 as usize);
-        let next_tile = collision_map.get_tile(next_tile.0, next_tile.1);
+        let next_tile_pos = TilePosition(UVec2::new(next_tile.0 as u32, next_tile.1 as u32));
+        let next_tile = world_map.get_tile(next_tile_pos);
 
         // We can keep moving in the same direction
         if let Some(next_tile) = next_tile
-            && next_tile.marker.is_ai_walkable()
+            && next_tile.is_ai_walkable()
         {
-            return (next_tile.x, next_tile.y);
+            return next_tile_pos;
         };
     }
 
-    return *position;
+    return position;
 }
 
 fn move_enemy(
@@ -147,22 +147,23 @@ fn move_enemy(
     movement: &mut EnemyMovement,
     speed: &MovementSpeed,
     movement_multiplier: Option<&MovementMultiplier>,
-    collision_map: &WorldMap,
+    world_map: &WorldMap,
     delta_secs: f32,
     enemy_rng_gen: &mut EnemyRngGen,
 ) {
     let mut step_distance =
         speed.0 * delta_secs * movement_multiplier.map(|mm| mm.multiplier).unwrap_or(1.0);
-    let desired_tile =
-        collision_map.get_tile(movement.desired_position.0, movement.desired_position.1);
+    let desired_pos = movement.desired_position;
+    let desired_tile = world_map.get_tile(desired_pos);
     if let Some(desired_tile) = desired_tile
-        && desired_tile.marker.is_ai_walkable()
+        && desired_tile.is_ai_walkable()
     {
-        let mut movement_dir_unnormalized = desired_tile.world_pos().0 - position.0;
+        let desired_world_pos = desired_pos.to_world_position();
+        let mut movement_dir_unnormalized = desired_world_pos.0 - position.0;
         let distance = movement_dir_unnormalized.length();
         if distance <= step_distance {
             // Enemy has reached the desired tile, so we can set its position to the desired tile
-            position.0 = desired_tile.world_pos().0;
+            position.0 = desired_world_pos.0;
             let next_tile_dir = movement
                 .last_direction
                 .map(|dir| dir.to_vec2())
@@ -172,17 +173,12 @@ fn move_enemy(
                 &next_tile_dir,
                 // enemy has already reached the desired tile, so we can use its coordinates as
                 // the current position
-                &movement.desired_position,
-                collision_map,
-                enemy_rng_gen,
+                desired_pos, world_map, enemy_rng_gen,
             );
 
-            movement.desired_position = (next_tile.0, next_tile.1);
+            movement.desired_position = next_tile;
 
-            movement_dir_unnormalized = collision_map
-                .get_tile(movement.desired_position.0, movement.desired_position.1)
-                .map(|tile| tile.world_pos().0 - position.0)
-                .unwrap_or(Vec2::ZERO);
+            movement_dir_unnormalized = desired_world_pos.0 - position.0;
             step_distance -= distance;
 
             // Now move the enemy by the remaining distance in one tick towards the next tile
@@ -201,9 +197,9 @@ fn move_enemy(
         // desired tile was not empty is either that it is out of the map (which should not happen)
         // or an explosion started on that tile. In the second case an enemy is either close to the
         // explosion and dies anyway or it will be the previous tile.
-        let new_tile = collision_map.get_position_from_world(position);
+        let new_tile = position.to_closest_tile();
         movement.desired_position =
-            choose_next_tile(&Vec2::ZERO, &new_tile, collision_map, enemy_rng_gen);
+            choose_next_tile(&Vec2::ZERO, new_tile, world_map, enemy_rng_gen);
         movement.last_direction = None;
     }
 }

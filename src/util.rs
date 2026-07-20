@@ -7,9 +7,9 @@ use bevy::{
 
 use crate::{
     assets::TILESET_TILE_SIZE,
+    constants::{TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
     game_state::GameState,
-    map::{MAP_HEIGHT, MAP_WIDTH},
-    position::WorldPosition,
+    position::{TilePosition, WorldPosition},
 };
 
 #[derive(Resource, Deref, DerefMut)]
@@ -43,8 +43,8 @@ fn recompute_window_size(window: &Window, monitor: Option<&Monitor>) -> f32 {
     let tile_width = TILESET_TILE_SIZE.x as f32;
     let tile_height = TILESET_TILE_SIZE.y as f32;
 
-    let map_width_px = MAP_WIDTH as f32 * tile_width;
-    let map_height_px = MAP_HEIGHT as f32 * tile_height;
+    let map_width_px = TOTAL_MAP_WIDTH as f32 * tile_width;
+    let map_height_px = TOTAL_MAP_HEIGHT as f32 * tile_height;
 
     (target_width / map_width_px).min(target_height / map_height_px)
 }
@@ -88,22 +88,42 @@ fn recompute_scale_on_window_change(
     commands.insert_resource(CameraScale(scale));
 }
 
-pub fn update_transformations(
-    mut query: Query<(&mut Transform, &WorldPosition, Option<&RenderScale>)>,
+fn update_transformation(
+    transform: &mut Transform,
+    world_position: WorldPosition,
+    render_scale: Option<&RenderScale>,
+    scale: f32,
+) {
+    let render_scale = render_scale.map(|rs| rs.0).unwrap_or(1.0);
+    *transform = Transform {
+        translation: Vec3::new(
+            world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
+            world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
+            transform.translation.z,
+        ),
+        scale: Vec3::splat(scale * render_scale),
+        rotation: transform.rotation,
+    };
+}
+
+fn update_world_transformations(
+    non_tile_entities: Query<(&mut Transform, &WorldPosition, Option<&RenderScale>)>,
     scale: Res<CameraScale>,
 ) {
     let scale = scale.0;
-    for (mut transform, world_position, render_scale) in query.iter_mut() {
-        let render_scale = render_scale.map(|rs| rs.0).unwrap_or(1.0);
-        *transform = Transform {
-            translation: Vec3::new(
-                world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
-                world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
-                transform.translation.z,
-            ),
-            scale: Vec3::splat(scale * render_scale),
-            rotation: transform.rotation,
-        };
+    for (mut transform, world_position, render_scale) in non_tile_entities {
+        update_transformation(&mut transform, *world_position, render_scale, scale);
+    }
+}
+
+fn update_tile_transformations(
+    tile_entities: Query<(&mut Transform, &TilePosition, Option<&RenderScale>)>,
+    scale: Res<CameraScale>,
+) {
+    let scale = scale.0;
+    for (mut transform, tile_position, render_scale) in tile_entities {
+        let world_position = tile_position.to_world_position();
+        update_transformation(&mut transform, world_position, render_scale, scale);
     }
 }
 
@@ -115,7 +135,8 @@ impl Plugin for CameraScalePlugin {
             .add_systems(PreUpdate, recompute_scale_on_window_change)
             .add_systems(
                 PostUpdate,
-                update_transformations.run_if(in_state(GameState::Playing)),
+                (update_world_transformations, update_tile_transformations)
+                    .run_if(in_state(GameState::Playing)),
             );
     }
 }

@@ -1,10 +1,4 @@
-use std::time::Duration;
-
-use bevy::{
-    camera::visibility::RenderLayers,
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 mod animation;
 
@@ -14,64 +8,24 @@ use crate::{
         bomb_tileset::{self, BombTileType},
         material::{ColouringMaterial, ExplosionMaterial},
     },
-    bomb::animation::{animate_bomb, animate_exploding_walls, animate_explosion},
+    bomb::animation::{
+        advance_and_despawn_explosions, animate_bomb, animate_exploding_walls, animate_explosion,
+        spawn_explosion_visuals,
+    },
+    constants::BOMB_DURATION,
     controls::Controls,
-    map::{CollisionMapTile, MapTile, MapTileSetter, WorldMap},
+    map::{BombTile, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
-    sound::EffectKind,
     util::RenderScale,
     world_entities::{
-        Bomb, BombCount, BombRange, BonusType, Character, DestructibleWall, Explosion, GameplaySet,
-        InGameEntity, MarkerBase,
+        Bomb, BombCount, BombRange, Character, GameplaySet, InGameEntity, MarkToDespawn,
     },
 };
 
 const BOMB_TICKS: u32 = 6;
-const BOMB_TICK_DURATION: f32 = 0.75;
 
 const EXPLOSION_TICKS: u32 = 9;
-const EXPLOSION_TICK_DURATION: f32 = 0.125;
-
-const WALL_EXPLOSION_TICKS: u32 = 4;
-// match the duration of the explosion animation to the duration of the wall explosion animation
-const WALL_EXPLOSION_TICK_DURATION: f32 =
-    EXPLOSION_TICK_DURATION * EXPLOSION_TICKS as f32 / WALL_EXPLOSION_TICKS as f32;
-
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-struct BombTiming {
-    timer: Timer,
-    pub ticks: u32,
-    max_ticks: u32,
-}
-
-impl BombTiming {
-    pub fn new(max_ticks: u32, interval: f32) -> Self {
-        Self {
-            timer: Timer::from_seconds(interval, TimerMode::Repeating),
-            ticks: 0,
-            max_ticks,
-        }
-    }
-
-    pub fn update(&mut self, delta_time: Duration) {
-        self.timer.tick(delta_time);
-
-        let times_finished = self.timer.times_finished_this_tick();
-        self.ticks += times_finished as u32;
-    }
-
-    pub fn is_on_final_tick(&self) -> bool {
-        self.ticks == self.max_ticks - 1
-    }
-
-    pub fn is_finished(&self) -> bool {
-        self.ticks >= self.max_ticks
-    }
-}
-
-#[derive(Component)]
-struct ExplodingWall;
 
 fn spawn_bomb_when_requested(
     mut commands: Commands,
@@ -94,318 +48,46 @@ fn spawn_bomb_when_requested(
     let bomb_material = materials.add(bomb_material);
 
     for (character_position, bomb_range, mut bomb_count) in characters.iter_mut() {
-        if let Some(tile) = world_map.get_tile_at_position(character_position)
-            && tile.marker.is_walkable()
+        let bomb_position = character_position.to_closest_tile();
+        if let Some(tile) = world_map.get_tile(bomb_position)
+            && tile.is_walkable()
+            && tile
+                .bomb_or_explosion()
+                .map(|t| !t.is_bomb())
+                .unwrap_or(true)
+            && bomb_count.current < bomb_count.max
         {
-            if bomb_count.current < bomb_count.max {
+            if world_map.try_add_bomb(
+                bomb_position,
+                BombTile {
+                    range: bomb_range.0,
+                    timer: Timer::new(BOMB_DURATION, TimerMode::Once),
+                },
+            ) {
                 bomb_count.current += 1;
                 commands.spawn((
                     Bomb,
                     InGameEntity,
-                    tile.world_pos(),
+                    bomb_position,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(bomb_material.clone()),
                     Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-                    BombTiming::new(BOMB_TICKS, BOMB_TICK_DURATION),
                     RenderScale(1.0),
-                    *bomb_range,
                 ));
-                world_map.set_tile(tile.x, tile.y, MapTileSetter::Bomb);
             }
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ExplosionPathType {
-    Center,
-    Straight,
-    End,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ExplosionOrientation {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl ExplosionOrientation {
-    fn to_vec2(&self) -> Vec2 {
-        match self {
-            ExplosionOrientation::Up => Vec2::Y,
-            ExplosionOrientation::Down => -Vec2::Y,
-            ExplosionOrientation::Left => -Vec2::X,
-            ExplosionOrientation::Right => Vec2::X,
-        }
-    }
-
-    fn variants() -> [ExplosionOrientation; 4] {
-        [
-            ExplosionOrientation::Up,
-            ExplosionOrientation::Down,
-            ExplosionOrientation::Left,
-            ExplosionOrientation::Right,
-        ]
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-struct ExplosionTileVariant {
-    pub kind: ExplosionPathType,
-    pub orientation: ExplosionOrientation,
-}
-
-struct ExplosionTile {
-    pub tile: CollisionMapTile,
-    pub variant: ExplosionTileVariant,
-    pub visual_only: bool,
-}
-
-struct ExplosionTiles {
-    pub explosion_tiles: Vec<ExplosionTile>,
-    pub chained_bombs: Vec<CollisionMapTile>,
-    pub destroyed_walls: Vec<CollisionMapTile>,
-}
-
-// #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq, Eq)]
-// struct ExplosionVisualOnly(pub bool);
-
-fn get_explosion_tiles(
-    world_map: &WorldMap,
-    bomb_position: &WorldPosition,
-    explosion_radius: u32,
-) -> ExplosionTiles {
-    let mut explosion_tiles = Vec::new();
-    let mut chained_bombs = Vec::new();
-    let mut destroyed_walls = Vec::new();
-
-    if let Some(center_tile) = world_map.get_tile_at_position(bomb_position) {
-        explosion_tiles.push(ExplosionTile {
-            tile: center_tile,
-            variant: ExplosionTileVariant {
-                kind: ExplosionPathType::Center,
-                orientation: ExplosionOrientation::Up,
-            },
-            visual_only: false,
-        });
-
-        for dir in ExplosionOrientation::variants().iter() {
-            let dir_vec = dir.to_vec2();
-            for i in 1..=explosion_radius {
-                let offset = dir_vec * i as f32;
-                let tile_pos = bomb_position.0 + offset;
-                if let Some(tile) = world_map.get_tile_at_position(&tile_pos.into()) {
-                    if tile.marker.has_bomb() {
-                        chained_bombs.push(tile);
-                    }
-                    match tile.marker.tile_base() {
-                        MarkerBase::Floor => {
-                            let variant = if i == explosion_radius {
-                                ExplosionPathType::End
-                            } else {
-                                ExplosionPathType::Straight
-                            };
-                            explosion_tiles.push(ExplosionTile {
-                                tile,
-                                variant: ExplosionTileVariant {
-                                    kind: variant,
-                                    orientation: *dir,
-                                },
-                                visual_only: false,
-                            });
-                        }
-                        MarkerBase::BasicWall => {
-                            explosion_tiles.push(ExplosionTile {
-                                tile,
-                                variant: ExplosionTileVariant {
-                                    kind: ExplosionPathType::End,
-                                    orientation: *dir,
-                                },
-                                visual_only: true,
-                            });
-                            destroyed_walls.push(tile);
-                            // Explosion stops at walls
-                            break;
-                        }
-                        MarkerBase::IndestructibleWall => {
-                            // Explosion stops at indestructible walls
-                            break;
-                        }
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-    }
-
-    ExplosionTiles {
-        explosion_tiles,
-        chained_bombs,
-        destroyed_walls,
-    }
-}
-
-// TODO refactor - this is too ugly
-fn explode_expired_bombs(
+fn despawn_exploded_bombs(
     mut commands: Commands,
-    mut world_map: ResMut<WorldMap>,
-    mut explosion_materials: ResMut<Assets<ExplosionMaterial>>,
-    mesh_handle: Res<MeshHandle>,
-    bomb_assets: Res<BombAssets>,
-    mut query: Query<
-        (Entity, &WorldPosition, &mut BombTiming, &BombRange),
-        (With<Bomb>, Without<MapTile>, Without<Character>),
-    >,
+    query: Query<Entity, (With<MarkToDespawn>, With<Bomb>)>,
     mut players: Query<&mut BombCount, (With<Character>, Without<Bomb>)>,
-    wall_tiles: Query<
-        (Entity, &WorldPosition),
-        (
-            With<MapTile>,
-            With<DestructibleWall>,
-            Without<Bomb>,
-            Without<Character>,
-        ),
-    >,
-    bonuses: Query<(Entity, &WorldPosition), (With<BonusType>, Without<Character>, Without<Bomb>)>,
-    time: Res<Time<Fixed>>,
 ) {
-    let delta_time = time.delta();
-
-    for (_, _, mut bomb_timing, _) in query.iter_mut() {
-        bomb_timing.update(delta_time);
-    }
-
-    let query = query.as_readonly();
-
-    // Hold all bombs that are still ticking and could potentially chain explode
-    let mut unexploded_bombs = HashMap::new();
-    // Hold all bombs that explode this tick
-    let mut bombs_to_explode_vec = Vec::new();
-    for (entity, world_pos, bomb_timing, explosion_radius) in query {
-        if bomb_timing.is_finished() {
-            // Collect all bombs that explode this tick
-            bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
-        } else {
-            // Collect all bombs which could potentially chain explode
-            unexploded_bombs.insert(
-                world_map.get_position_from_world(world_pos),
-                (entity, world_pos, explosion_radius),
-            );
-        }
-    }
-
-    let mut walls_to_destroy = HashSet::new();
-    let mut bonuses_to_remove = HashMap::new();
-
-    let mut i = 0;
-    while let Some((entity, world_pos, explosion_radius)) = bombs_to_explode_vec.get(i) {
-        i += 1;
-
-        commands.entity(*entity).despawn();
-        let ExplosionTiles {
-            explosion_tiles,
-            chained_bombs,
-            destroyed_walls,
-        } = get_explosion_tiles(&world_map, world_pos, explosion_radius.0);
-
-        walls_to_destroy.extend(destroyed_walls.iter().map(|tile| (tile.x, tile.y)));
-
-        for ExplosionTile {
-            tile,
-            variant,
-            visual_only,
-        } in explosion_tiles
-        {
-            if !visual_only && let Some(bonus) = tile.marker.bonus() {
-                bonuses_to_remove.insert((tile.x, tile.y), bonus);
-            }
-            world_map.set_tile(tile.x, tile.y, MapTileSetter::Explosion);
-
-            let Some(mut explosion_material) = explosion_materials
-                .get(&bomb_assets.bomb_explosion_handles.0)
-                .cloned()
-            else {
-                continue;
-            };
-            explosion_material.set_uv_rect(Rect::default());
-            explosion_material.set_flip_x(false);
-            let explosion_material = explosion_materials.add(explosion_material);
-            commands.spawn((
-                Explosion,
-                InGameEntity,
-                tile.world_pos(),
-                Mesh2d(mesh_handle.0.clone()),
-                MeshMaterial2d(explosion_material),
-                Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-                BombTiming::new(EXPLOSION_TICKS, EXPLOSION_TICK_DURATION),
-                variant,
-                RenderLayers::layer(1),
-            ));
-        }
-
-        for bomb_to_explode in chained_bombs {
-            if let Some((entity, world_pos, explosion_radius)) =
-                unexploded_bombs.remove(&(bomb_to_explode.x, bomb_to_explode.y))
-            {
-                bombs_to_explode_vec.push((entity, world_pos, explosion_radius));
-            }
-        }
-    }
-
-    for mut bomb_count in players.iter_mut() {
-        bomb_count.current -= bombs_to_explode_vec.len() as u32;
-    }
-
-    for (entity, world_pos) in wall_tiles {
-        let (x, y) = world_map.get_position_from_world(world_pos);
-        if walls_to_destroy.contains(&(x, y)) {
-            commands.entity(entity).insert((
-                ExplodingWall,
-                BombTiming::new(WALL_EXPLOSION_TICKS, WALL_EXPLOSION_TICK_DURATION),
-            ));
-        }
-    }
-
-    if bombs_to_explode_vec.len() > 0 {
-        commands.trigger(EffectKind::Explosion);
-    }
-
-    let all_bonuses = bonuses
-        .iter()
-        .map(|(entity, pos)| {
-            let (x, y) = world_map.get_position_from_world(pos);
-            ((x, y), entity)
-        })
-        .collect::<HashMap<_, _>>();
-    for ((x, y), bonus) in bonuses_to_remove {
-        if let Some(entity) = all_bonuses.get(&(x, y)) {
-            commands.entity(*entity).despawn();
-        }
-        world_map.set_tile(x, y, MapTileSetter::RemoveBonus);
-        match bonus {
-            // TODO for all but negative bonuses schedule a enemy spawn
-            _ => {}
-        }
-    }
-}
-
-fn remove_expired_explosions(
-    mut commands: Commands,
-    mut world_map: ResMut<WorldMap>,
-    mut query: Query<(Entity, &WorldPosition, &mut BombTiming), With<Explosion>>,
-    time: Res<Time<Fixed>>,
-) {
-    let delta_time = time.delta();
-    for (entity, position, mut bomb_timing) in query.iter_mut() {
-        bomb_timing.update(delta_time);
-        if bomb_timing.is_finished() {
-            commands.entity(entity).despawn();
-            if let Some(tile) = world_map.get_tile_at_position(position) {
-                world_map.set_tile(tile.x, tile.y, MapTileSetter::Clear);
-            }
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
+        for mut bomb_count in players.iter_mut() {
+            bomb_count.current -= 1;
         }
     }
 }
@@ -437,20 +119,6 @@ fn prepare_bomb_assets(
     });
 }
 
-fn advance_exploding_walls(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut BombTiming), With<ExplodingWall>>,
-    time: Res<Time<Fixed>>,
-) {
-    let delta_time = time.delta();
-    for (entity, mut bomb_timing) in query.iter_mut() {
-        bomb_timing.update(delta_time);
-        if bomb_timing.is_finished() {
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
 pub struct BombPlugin;
 
 impl Plugin for BombPlugin {
@@ -459,19 +127,19 @@ impl Plugin for BombPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    spawn_bomb_when_requested.in_set(GameplaySet::Bomb),
-                    (
-                        explode_expired_bombs,
-                        advance_exploding_walls,
-                        remove_expired_explosions,
-                    )
-                        .chain()
-                        .in_set(GameplaySet::Explosion),
+                    spawn_bomb_when_requested.in_set(GameplaySet::BombPlacement),
+                    despawn_exploded_bombs.in_set(GameplaySet::MapTickUpdate),
                 ),
             )
             .add_systems(
                 PostUpdate,
-                (animate_bomb, animate_explosion, animate_exploding_walls)
+                (
+                    spawn_explosion_visuals,
+                    advance_and_despawn_explosions,
+                    animate_bomb,
+                    animate_explosion,
+                    animate_exploding_walls,
+                )
                     .in_set(GameplaySet::AnimationAndSound),
             );
     }

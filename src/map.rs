@@ -1,180 +1,135 @@
-use std::ops::IndexMut;
+mod explosion;
+mod generation;
+mod map_tile;
+mod neighbours;
+
+use std::time::Duration;
 
 use bevy::prelude::*;
-use rand::{RngExt, SeedableRng, rngs::StdRng, seq::SliceRandom};
+pub use map_tile::*;
+pub use neighbours::*;
+use rand::{SeedableRng, rngs::StdRng};
 
 use crate::{
     assets::{
         map_tileset::{self, MapTilesetHandles, PowerUpTileType},
         material::ColouringMaterial,
     },
+    constants::{TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
     game_state::GameState,
-    position::WorldPosition,
+    map::explosion::ExplosionVisual,
+    position::TilePosition,
     rendering::MeshHandle,
+    sound::EffectKind,
     world_entities::{
-        AllEnemiesKilledEvent, BonusType, DestructibleWall, ExitGate, InGameEntity, MapTileMarker,
-        SpawnSystemSet,
+        AllEnemiesKilledEvent, Bomb, Bonus, BonusType, DestructibleWall, Explosion,
+        ExplosionNeedsSetup, GameplaySet, InGameEntity, MarkToDespawn, SpawnSystemSet,
     },
 };
 
-pub const MAP_WIDTH: usize = 19;
-pub const MAP_HEIGHT: usize = 15;
-
 const RND_SEED: u64 = 123456789;
-const WALL_DENSITY: f64 = 0.60;
 
-const BONUSES: [(PowerUpTileType, u8); PowerUpTileType::COUNT as usize] = [
-    (PowerUpTileType::Range, 5),
-    (PowerUpTileType::BombCount, 5),
-    (PowerUpTileType::Negative, 5),
-    (PowerUpTileType::ExtraLife, 0),
-    (PowerUpTileType::Hook, 0),
-    (PowerUpTileType::BombKick, 0),
-    (PowerUpTileType::Detonator, 0),
-    (PowerUpTileType::Turbo, 0),
-    (PowerUpTileType::LineBomb, 0),
-    (PowerUpTileType::DoubleBomb, 0),
-    (PowerUpTileType::Max, 0),
-];
-
-fn map_power_up(power_up_tile_type: PowerUpTileType) -> BonusType {
+fn map_power_up(power_up_tile_type: BonusType) -> PowerUpTileType {
     match power_up_tile_type {
-        PowerUpTileType::Range => BonusType::Range,
-        PowerUpTileType::BombCount => BonusType::BombCount,
-        PowerUpTileType::Negative => BonusType::Negative,
-        PowerUpTileType::ExtraLife => BonusType::ExtraLife,
-        PowerUpTileType::Hook => BonusType::Hook,
-        PowerUpTileType::BombKick => BonusType::BombKick,
-        PowerUpTileType::Detonator => BonusType::Detonator,
-        PowerUpTileType::Turbo => BonusType::Turbo,
-        PowerUpTileType::LineBomb => BonusType::LineBomb,
-        PowerUpTileType::DoubleBomb => BonusType::DoubleBomb,
-        PowerUpTileType::Max => BonusType::Max,
+        BonusType::Range => PowerUpTileType::Range,
+        BonusType::BombCount => PowerUpTileType::BombCount,
+        BonusType::Negative => PowerUpTileType::Negative,
+        BonusType::ExtraLife => PowerUpTileType::ExtraLife,
+        BonusType::Hook => PowerUpTileType::Hook,
+        BonusType::BombKick => PowerUpTileType::BombKick,
+        BonusType::Detonator => PowerUpTileType::Detonator,
+        BonusType::Turbo => PowerUpTileType::Turbo,
+        BonusType::LineBomb => PowerUpTileType::LineBomb,
+        BonusType::DoubleBomb => PowerUpTileType::DoubleBomb,
+        BonusType::Max => PowerUpTileType::Max,
     }
 }
 
-#[derive(Resource, Debug, Clone, PartialEq, Eq)]
+#[derive(Resource, Debug, Clone)]
 pub struct WorldMap {
-    tiles: Vec<MapTileMarker>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MapTileSetter {
-    Clear,
-    Bomb,
-    Explosion,
-    RemoveBonus,
+    exit_gate_index: usize,
+    tiles: Vec<MapTile>,
 }
 
 impl WorldMap {
-    pub fn width(&self) -> usize {
-        MAP_WIDTH
-    }
-
-    pub fn height(&self) -> usize {
-        MAP_HEIGHT
-    }
-
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<CollisionMapTile> {
-        if x >= self.width() as usize || y >= self.height() as usize {
+    fn pos_to_index(pos: TilePosition) -> Option<usize> {
+        let pos_x = pos.x as usize;
+        let pos_y = pos.y as usize;
+        if pos_x >= TOTAL_MAP_WIDTH || pos_y >= TOTAL_MAP_HEIGHT {
             return None;
         }
-        let index = y * self.width() as usize + x;
-        self.tiles
-            .get(index)
-            .copied()
-            .map(|marker| CollisionMapTile { x, y, marker })
+        Some(pos_y * TOTAL_MAP_WIDTH + pos_x)
     }
 
-    pub fn get_tile_at_position(&self, position: &WorldPosition) -> Option<CollisionMapTile> {
-        let x = (position.x + 0.5 + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
-        let y = (position.y + 0.5 + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
-        self.get_tile(x, y)
+    pub fn get_tile(&self, pos: TilePosition) -> Option<&MapTile> {
+        self.tiles.get(WorldMap::pos_to_index(pos)?)
     }
 
-    pub fn get_position_from_world(&self, position: &WorldPosition) -> (usize, usize) {
-        let x = (position.x + 0.5 + (MAP_WIDTH - 1) as f32 * 0.5) as usize;
-        let y = (position.y + 0.5 + (MAP_HEIGHT - 1) as f32 * 0.5) as usize;
-        (x, y)
+    fn get_tile_mut(&mut self, pos: TilePosition) -> Option<&mut MapTile> {
+        self.tiles.get_mut(WorldMap::pos_to_index(pos)?)
     }
 
-    pub fn set_tile(&mut self, x: usize, y: usize, value: MapTileSetter) {
-        if x >= self.width() as usize || y >= self.height() as usize {
-            return;
-        }
-        let index = y * self.width() as usize + x;
-        if let Some(tile) = self.tiles.get_mut(index) {
-            match value {
-                MapTileSetter::Explosion => tile.set_explosion(true),
-                MapTileSetter::Bomb => tile.set_bomb(true),
-                MapTileSetter::Clear => {
-                    if tile.is_basic_wall() {
-                        tile.set_explosion(false).set_bomb(false).remove_wall()
-                    } else {
-                        tile.set_explosion(false).set_bomb(false).clear_bonus()
-                    }
-                }
-                MapTileSetter::RemoveBonus => tile.clear_bonus(),
-            };
-        }
+    pub fn index_to_tile_pos(index: usize) -> TilePosition {
+        TilePosition(UVec2 {
+            x: (index % TOTAL_MAP_WIDTH) as u32,
+            y: (index / TOTAL_MAP_WIDTH) as u32,
+        })
     }
 
-    pub fn is_starting_area(x: usize, y: usize) -> bool {
-        x <= 2 && y >= MAP_HEIGHT - 2 - 1
-    }
-
-    pub fn get_empty_tiles_non_starting_area(&self) -> impl Iterator<Item = CollisionMapTile> {
+    pub fn iter(&self) -> impl Iterator<Item = (TilePosition, &MapTile)> {
         self.tiles
             .iter()
             .enumerate()
-            .filter_map(move |(index, &marker)| {
-                if marker.is_floor() {
-                    let x = index % self.width() as usize;
-                    let y = index / self.width() as usize;
-                    (!Self::is_starting_area(x, y)).then(|| CollisionMapTile { x, y, marker })
-                } else {
-                    None
-                }
-            })
+            .map(|(index, tile)| (Self::index_to_tile_pos(index), tile))
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CollisionMapTile {
-    pub x: usize,
-    pub y: usize,
-    pub marker: MapTileMarker,
-}
+    pub fn iter_empty_non_starting_tiles(&self) -> impl Iterator<Item = TilePosition> + '_ {
+        let starting_area_indices = Self::get_starting_area_indices();
+        self.tiles.iter().enumerate().filter_map(move |(i, t)| {
+            (t.is_ai_walkable() && !starting_area_indices.contains(&i))
+                .then(|| Self::index_to_tile_pos(i))
+        })
+    }
 
-impl CollisionMapTile {
-    pub fn world_pos(&self) -> WorldPosition {
-        Vec2::new(
-            self.x as f32 - (MAP_WIDTH - 1) as f32 * 0.5,
-            self.y as f32 - (MAP_HEIGHT - 1) as f32 * 0.5,
-        )
-        .into()
+    pub fn process_tick(&mut self, delta: Duration) {
+        for tile in self.tiles.iter_mut() {
+            tile.tick(delta);
+        }
+    }
+
+    pub fn remove_bonus(&mut self, pos: TilePosition) -> Option<BonusType> {
+        if let Some(tile) = self.get_tile_mut(pos) {
+            tile.remove_bonus()
+        } else {
+            None
+        }
+    }
+
+    pub fn try_add_bomb(&mut self, pos: TilePosition, bomb_tile: BombTile) -> bool {
+        if let Some(tile) = self.get_tile_mut(pos) {
+            tile.try_add_bomb(bomb_tile)
+        } else {
+            false
+        }
+    }
+
+    pub fn open_exit(&mut self) {
+        self.tiles[self.exit_gate_index].open_exit();
+    }
+
+    pub fn open_exit_position(&self) -> Option<TilePosition> {
+        self.tiles[self.exit_gate_index].special().and_then(|s| {
+            s.is_open_exit()
+                .then(|| Self::index_to_tile_pos(self.exit_gate_index))
+        })
     }
 }
 
 #[derive(Component)]
-pub struct MapTile;
+pub struct MapTileComponent;
 
 #[derive(Component)]
 struct ClosedGateTile;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Tile {
-    IndestructibleWall,
-    Wall,
-    Floor,
-}
-
-fn index_to_world_position(index: usize) -> WorldPosition {
-    WorldPosition(Vec2 {
-        x: (index % MAP_WIDTH) as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
-        y: (index / MAP_WIDTH) as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,
-    })
-}
 
 fn setup_map(
     mut commands: Commands,
@@ -182,14 +137,17 @@ fn setup_map(
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
+    // Generate map
+    let mut rng_gen = StdRng::seed_from_u64(RND_SEED);
+    let map = WorldMap::new_random_default(&mut rng_gen);
+
+    // Prepare materials and rendering stuff
     let MapTilesetHandles {
         floor: floor_tilemap_handles,
         basic: basic_tilemap_handles,
         non_standard: non_standard_tilemap_handles,
         bonuses: bonuses_tilemap_handles,
     } = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
-    let mut map_tile_markers = Vec::new();
-
     let Some(floor_colouring_material) = material.get(&floor_tilemap_handles.0) else {
         return;
     };
@@ -228,151 +186,146 @@ fn setup_map(
         map_tileset::BONUSES_TILEMAP.sprite_uv_rect(map_tileset::PowerUpTileType::Range),
     );
 
-    let mut rng_gen = StdRng::seed_from_u64(RND_SEED);
-
     // These are never changed
     let floor_material = material.add(floor_material);
     let indestructible_wall_material = material.add(indestructible_wall_material);
 
-    for y in 0..MAP_HEIGHT {
-        for x in 0..MAP_WIDTH {
-            let tile_marker = if x == 0
-                || x == MAP_WIDTH - 1
-                || y == 0
-                || y == MAP_HEIGHT - 1
-                || (x % 2 == 0 && y % 2 == 0)
-            {
-                Tile::IndestructibleWall
-            } else if WorldMap::is_starting_area(x, y) {
-                Tile::Floor
-            } else if rng_gen.random_bool(WALL_DENSITY) {
-                Tile::Wall
-            } else {
-                Tile::Floor
-            };
-
-            map_tile_markers.push(match tile_marker {
-                Tile::IndestructibleWall => MapTileMarker::indestructible_wall(),
-                Tile::Wall => MapTileMarker::basic_wall(),
-                Tile::Floor => MapTileMarker::floor(),
-            });
-
-            let world_position = WorldPosition(Vec2 {
-                x: x as f32 - ((MAP_WIDTH - 1) as f32) * 0.5,
-                y: y as f32 - ((MAP_HEIGHT - 1) as f32) * 0.5,
-            });
-
-            match tile_marker {
-                Tile::IndestructibleWall | Tile::Floor => {
-                    let material = match tile_marker {
-                        Tile::IndestructibleWall => indestructible_wall_material.clone(),
-                        Tile::Floor => floor_material.clone(),
-                        _ => unreachable!(),
-                    };
-                    commands.spawn((
-                        MapTile,
-                        InGameEntity,
-                        Mesh2d(mesh_handle.0.clone()),
-                        MeshMaterial2d(material.clone()),
-                        world_position,
-                        Transform::from_xyz(0.0, 0.0, 0.0),
-                    ));
-                }
-                Tile::Wall => {
-                    // Every wall is handled by spawning both floor and wall. Wall can be destroyed
-                    // but floor remains.
-                    commands.spawn((
-                        MapTile,
-                        InGameEntity,
-                        Mesh2d(mesh_handle.0.clone()),
-                        MeshMaterial2d(floor_material.clone()),
-                        world_position,
-                        Transform::from_xyz(0.0, 0.0, 0.0),
-                    ));
-                    commands.spawn((
-                        MapTile,
-                        InGameEntity,
-                        DestructibleWall,
-                        Mesh2d(mesh_handle.0.clone()),
-                        MeshMaterial2d(material.add(wall_material.clone())),
-                        world_position,
-                        Transform::from_xyz(0.0, 0.0, 0.1),
-                    ));
-                }
+    for (position, tile) in map.iter() {
+        match tile.base_type() {
+            BaseTile::Floor => {
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(floor_material.clone()),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.0),
+                ));
             }
-        }
+            BaseTile::IndestructibleWall => {
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(indestructible_wall_material.clone()),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.0),
+                ));
+            }
+            BaseTile::BasicWall | BaseTile::BreakingWall(_) => {
+                // Every wall is handled by spawning both floor and wall. Wall can be destroyed but
+                // floor remains.
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(floor_material.clone()),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.0),
+                ));
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    DestructibleWall,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(material.add(wall_material.clone())),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.1),
+                ));
+            }
+        };
+        match tile.special() {
+            Some(SpecialTile::ClosedExit) | Some(SpecialTile::OpenExit) => {
+                // Open exit should never happen since creating map never creates it but is here for
+                // completeness
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    ClosedGateTile,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(material.add(closed_gate_material.clone())),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.04),
+                ));
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(material.add(open_gate_material.clone())),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.02),
+                ));
+            }
+            Some(SpecialTile::Bonus(bonus)) => {
+                let mut bonuses_material = bonuses_material.clone();
+                bonuses_material
+                    .set_uv_rect(map_tileset::BONUSES_TILEMAP.sprite_uv_rect(map_power_up(*bonus)));
+                commands.spawn((
+                    MapTileComponent,
+                    InGameEntity,
+                    Bonus,
+                    *bonus,
+                    Mesh2d(mesh_handle.0.clone()),
+                    MeshMaterial2d(material.add(bonuses_material)),
+                    position,
+                    Transform::from_xyz(0.0, 0.0, 0.02),
+                ));
+            }
+            None => {}
+        };
     }
 
-    // Insert all bonuses behind walls
-    let mut wall_indices = map_tile_markers
-        .iter()
-        .enumerate()
-        .filter_map(|(i, tile)| tile.is_basic_wall().then_some(i))
-        .collect::<Vec<_>>();
-    wall_indices.shuffle(&mut rng_gen);
-
-    if wall_indices.len() > 0 {
-        let index = wall_indices[0];
-        let marker = map_tile_markers.index_mut(index);
-        *marker = marker.with_exit();
-        let world_position = index_to_world_position(index);
-        commands.spawn((
-            MapTile,
-            InGameEntity,
-            ClosedGateTile,
-            Mesh2d(mesh_handle.0.clone()),
-            MeshMaterial2d(material.add(closed_gate_material)),
-            world_position,
-            Transform::from_xyz(0.0, 0.0, 0.04),
-        ));
-        commands.spawn((
-            MapTile,
-            InGameEntity,
-            ExitGate,
-            Mesh2d(mesh_handle.0.clone()),
-            MeshMaterial2d(material.add(open_gate_material)),
-            world_position,
-            Transform::from_xyz(0.0, 0.0, 0.02),
-        ));
-    };
-
-    let mut bonuses = Vec::new();
-    for (bonus_type, count) in BONUSES {
-        for _ in 0..count {
-            bonuses.push(bonus_type);
-        }
-    }
-    bonuses.shuffle(&mut rng_gen);
-    for (i, bonus_type) in wall_indices.into_iter().skip(1).zip(bonuses) {
-        let world_position = index_to_world_position(i);
-        let bonus_type_component = map_power_up(bonus_type);
-        let marker = map_tile_markers.index_mut(i);
-        *marker = marker.with_bonus(bonus_type_component);
-        let mut bonuses_material = bonuses_material.clone();
-        bonuses_material.set_uv_rect(map_tileset::BONUSES_TILEMAP.sprite_uv_rect(bonus_type));
-        commands.spawn((
-            MapTile,
-            InGameEntity,
-            bonus_type_component,
-            Mesh2d(mesh_handle.0.clone()),
-            MeshMaterial2d(material.add(bonuses_material)),
-            world_position,
-            Transform::from_xyz(0.0, 0.0, 0.02),
-        ));
-    }
-
-    commands.insert_resource(WorldMap {
-        tiles: map_tile_markers,
-    });
+    commands.insert_resource(map);
 }
 
 fn on_all_enemies_killed(
     _: On<AllEnemiesKilledEvent>,
     mut commands: Commands,
     closed_gate_tiles: Query<Entity, With<ClosedGateTile>>,
+    mut map: ResMut<WorldMap>,
 ) {
     for entity in closed_gate_tiles {
         commands.entity(entity).despawn();
+    }
+    map.open_exit();
+}
+
+fn process_map_in_tick(mut commands: Commands, mut map: ResMut<WorldMap>, time: Res<Time<Fixed>>) {
+    map.process_tick(time.delta());
+
+    let new_visuals = map.explode_bombs();
+    for ExplosionVisual { variant, pos } in new_visuals {
+        commands.spawn((Explosion, variant, pos, ExplosionNeedsSetup));
+        commands.trigger(EffectKind::Explosion);
+    }
+
+    for tile in map.tiles.iter_mut() {
+        tile.convert_expired_entities();
+    }
+}
+
+fn clean_map_removed_entities(
+    mut commands: Commands,
+    map: Res<WorldMap>,
+    bombs: Query<(Entity, &TilePosition), (With<Bomb>, Without<Bonus>)>,
+    bonuses: Query<(Entity, &TilePosition), (With<Bonus>, Without<Bomb>)>,
+) {
+    for (entity, position) in bombs {
+        if let Some(tile) = map.get_tile(*position)
+            && tile
+                .bomb_or_explosion()
+                .map(|v| v.is_explosion())
+                .unwrap_or(true)
+        {
+            commands.entity(entity).insert(MarkToDespawn);
+        }
+    }
+    for (entity, position) in bonuses {
+        if let Some(tile) = map.get_tile(*position)
+            && tile.special().is_none()
+        {
+            commands.entity(entity).despawn();
+        }
     }
 }
 
@@ -380,9 +333,18 @@ pub struct Map;
 
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
-        app.add_observer(on_all_enemies_killed).add_systems(
-            OnEnter(GameState::Playing),
-            setup_map.in_set(SpawnSystemSet::CreateMap),
-        );
+        app.add_observer(on_all_enemies_killed)
+            .add_systems(
+                OnEnter(GameState::Playing),
+                setup_map.in_set(SpawnSystemSet::CreateMap),
+            )
+            .add_systems(
+                FixedUpdate,
+                process_map_in_tick.in_set(GameplaySet::MapTickUpdate),
+            )
+            .add_systems(
+                Update,
+                clean_map_removed_entities.in_set(GameplaySet::MapToVisualsSync),
+            );
     }
 }

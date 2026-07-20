@@ -1,9 +1,7 @@
 mod bonuses;
-mod map_tile_marker;
 
 use bevy::prelude::*;
 pub use bonuses::*;
-pub use map_tile_marker::*;
 
 #[derive(Component)]
 pub struct Character;
@@ -55,6 +53,30 @@ pub struct Bomb;
 pub struct Explosion;
 
 #[derive(Component)]
+pub struct MarkToDespawn;
+
+#[derive(Component)]
+pub struct ExplosionNeedsSetup;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExplosionOrientation {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExplosionVariant {
+    Center,
+    Straight(ExplosionOrientation),
+    End(ExplosionOrientation),
+}
+
+#[derive(Component)]
+pub struct Bonus;
+
+#[derive(Component)]
 pub struct InGameEntity;
 
 #[derive(Component)]
@@ -63,8 +85,20 @@ pub struct Killable;
 #[derive(Component)]
 pub struct DestructibleWall;
 
-#[derive(Component)]
-pub struct ExitGate;
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BonusType {
+    Range,
+    BombCount,
+    Negative,
+    ExtraLife,
+    Hook,
+    BombKick,
+    Detonator,
+    Turbo,
+    LineBomb,
+    DoubleBomb,
+    Max,
+}
 
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
 pub struct MovementSpeed(pub f32);
@@ -79,9 +113,10 @@ pub struct AllEnemiesKilled;
 pub enum GameplaySet {
     Controls,
     Movement,
-    Bomb,
-    Explosion,
+    BombPlacement,
+    MapTickUpdate,
     DeathAndVictory,
+    MapToVisualsSync,
     AnimationAndSound,
 }
 

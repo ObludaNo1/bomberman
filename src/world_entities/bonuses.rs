@@ -7,7 +7,7 @@ pub struct BombRange(pub u32);
 
 impl Default for BombRange {
     fn default() -> Self {
-        BombRange(1)
+        BombRange(3)
     }
 }
 
@@ -19,7 +19,7 @@ pub struct BombCount {
 
 impl Default for BombCount {
     fn default() -> Self {
-        BombCount { current: 0, max: 1 }
+        BombCount { current: 0, max: 4 }
     }
 }
 

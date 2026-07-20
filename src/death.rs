@@ -32,29 +32,25 @@ impl DeathTimer {
     }
 }
 
-fn manhattan_distance(pos1: &Vec2, pos2: &Vec2) -> f32 {
+fn manhattan_distance(pos1: Vec2, pos2: Vec2) -> f32 {
     (pos1.x - pos2.x).abs() + (pos1.y - pos2.y).abs()
 }
 
-fn check_kill_from_explosion(world_position: &WorldPosition, world_map: &WorldMap) -> bool {
-    let nearest_explosion_distance = [
-        Vec2::new(-0.5, 0.5),
-        Vec2::new(0.5, 0.5),
-        Vec2::new(-0.5, -0.5),
-        Vec2::new(0.5, -0.5),
-    ]
-    .map(|offset| {
-        world_map
-            .get_tile_at_position(&WorldPosition(world_position.0 + offset))
-            .and_then(|tile| {
-                (tile.marker.has_explosion())
-                    .then(|| manhattan_distance(&tile.world_pos().0, &world_position.0))
-            })
-    })
-    .iter()
-    .fold(f32::INFINITY, |acc, x| acc.min(x.unwrap_or(f32::INFINITY)));
-
-    nearest_explosion_distance < KILL_DISTANCE_THRESHOLD
+fn check_kill_from_explosion(world_position: WorldPosition, world_map: &WorldMap) -> bool {
+    world_map
+        .world_position_neighbours(world_position)
+        .map(|n| {
+            n.iter()
+                .map(|n| {
+                    n.tile
+                        .bomb_or_explosion()
+                        .is_some_and(|v| v.is_explosion())
+                        .then(|| manhattan_distance(n.pos.to_world_position().0, world_position.0))
+                })
+                .fold(f32::INFINITY, |acc, x| acc.min(x.unwrap_or(f32::INFINITY)))
+                < KILL_DISTANCE_THRESHOLD
+        })
+        .unwrap_or(false)
 }
 
 fn check_explosion_entity_kills(
@@ -70,7 +66,7 @@ fn check_explosion_entity_kills(
     world_map: Res<WorldMap>,
 ) {
     for (entity, world_position) in non_characters {
-        if check_kill_from_explosion(world_position, &world_map) {
+        if check_kill_from_explosion(*world_position, &world_map) {
             commands
                 .entity(entity)
                 .insert(DeathTimer::new(ENEMY_DEATH_DURATION));
@@ -78,7 +74,7 @@ fn check_explosion_entity_kills(
         }
     }
     for (entity, world_position) in character {
-        if check_kill_from_explosion(world_position, &world_map) {
+        if check_kill_from_explosion(*world_position, &world_map) {
             commands
                 .entity(entity)
                 .insert(DeathTimer::new(CHARACTER_DEATH_DURATION));

@@ -4,7 +4,7 @@ mod movement;
 use std::time::Duration;
 
 use bevy::prelude::*;
-use rand::{RngExt, SeedableRng, rngs::StdRng};
+use rand::{SeedableRng, rngs::StdRng, seq::SliceRandom};
 
 use crate::{
     animation::{AnimationController, MovementDirection},
@@ -12,6 +12,7 @@ use crate::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
+    constants::ENEMIES_SPAWNED,
     enemy::{
         animation::{animate_enemies, get_enemy_animation_frames},
         movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
@@ -25,8 +26,7 @@ use crate::{
     },
 };
 
-const ENEMY_RNG_SEED: u64 = 1234567890;
-const ENEMIES_SPAWNED: usize = 5;
+const ENEMY_RNG_SEED: u64 = 123456789;
 
 #[derive(Resource, Deref, DerefMut)]
 struct EnemyRngGen(pub StdRng);
@@ -45,24 +45,22 @@ fn spawn_enemies(
         return;
     };
 
-    let free_locations = world_map
-        .get_empty_tiles_non_starting_area()
+    let mut free_locations = world_map
+        .iter_empty_non_starting_tiles()
         .collect::<Vec<_>>();
+    free_locations.shuffle(&mut enemy_rng_gen);
 
-    for _ in 0..ENEMIES_SPAWNED {
-        let index = enemy_rng_gen.random_range(0..free_locations.len());
-        let tile = free_locations[index];
-        let enemy_material = material.add(enemy_material.clone());
+    for tile in free_locations.into_iter().take(ENEMIES_SPAWNED) {
         commands.spawn((
             Enemy,
             Killable,
             InGameEntity,
-            tile.world_pos(),
+            tile.to_world_position(),
             Mesh2d(mesh_handle.0.clone()),
-            MeshMaterial2d(enemy_material),
+            MeshMaterial2d(material.add(enemy_material.clone())),
             Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
             AnimationController::<EnemyTileType>::new(get_enemy_animation_frames),
-            EnemyMovement::new((tile.x, tile.y)),
+            EnemyMovement::new(tile),
             MovementDirection(None),
             MovementSpeed(1.5),
         ));
