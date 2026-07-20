@@ -9,8 +9,7 @@ use crate::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
-    death::DeathTimer,
-    world_entities::{Direction, Enemy},
+    world_entities::{ActorState, Direction, Enemy},
 };
 
 const ENEMY_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
@@ -90,7 +89,7 @@ pub fn animate_enemies(
             &mut AnimationController<EnemyTileType>,
             &MovementDirection,
             &MeshMaterial2d<ColouringMaterial>,
-            Option<&DeathTimer>,
+            &ActorState,
         ),
         With<Enemy>,
     >,
@@ -101,7 +100,7 @@ pub fn animate_enemies(
     for (mut animation_controller, movement_direction, material_handle, death_timer) in
         query.iter_mut()
     {
-        let frame = if let Some(death_timer) = death_timer {
+        let frame = if let ActorState::Dying(death_timer) = death_timer {
             get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES)
         } else {
             animation_controller.update(delta_time, *movement_direction);

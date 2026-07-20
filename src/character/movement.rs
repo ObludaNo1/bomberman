@@ -4,12 +4,10 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    character::victory::VictoryTimer,
     controls::Controls,
-    death::DeathTimer,
     map::WorldMap,
     position::WorldPosition,
-    world_entities::{Character, Direction, MovementMultiplier, MovementSpeed},
+    world_entities::{ActorState, Character, Direction, MovementMultiplier, MovementSpeed},
 };
 
 const BORDER_PASSING: f32 = 0.6666;
@@ -150,9 +148,10 @@ pub fn move_character(
             &mut WorldPosition,
             &mut MovementDirection,
             &MovementSpeed,
+            &ActorState,
             Option<&MovementMultiplier>,
         ),
-        (With<Character>, Without<DeathTimer>, Without<VictoryTimer>),
+        With<Character>,
     >,
     controls: Res<Controls>,
     time: Res<Time<Fixed>>,
@@ -160,9 +159,13 @@ pub fn move_character(
 ) {
     let delta_time = time.delta_secs();
 
-    for (mut world_position, mut animation_dir, movement_speed, movement_multiplier) in
+    for (mut world_position, mut animation_dir, movement_speed, state, movement_multiplier) in
         characters.iter_mut()
     {
+        if !matches!(state, ActorState::Alive) {
+            continue;
+        }
+
         let desired_movement = controls.into_movement();
 
         if let Some(direction) = desired_movement {

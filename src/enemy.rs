@@ -21,7 +21,7 @@ use crate::{
     map::WorldMap,
     rendering::MeshHandle,
     world_entities::{
-        Enemy, GameplaySet, InGameEntity, Killable, MovementMultiplier, MovementSpeed,
+        ActorState, Enemy, GameplaySet, InGameEntity, Killable, MovementMultiplier, MovementSpeed,
         SpawnSystemSet, SpeedUpEnemies,
     },
 };
@@ -55,6 +55,7 @@ fn spawn_enemies(
             Enemy,
             Killable,
             InGameEntity,
+            ActorState::Alive,
             tile.to_world_position(),
             Mesh2d(mesh_handle.0.clone()),
             MeshMaterial2d(material.add(enemy_material.clone())),

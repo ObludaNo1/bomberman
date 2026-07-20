@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{death::DeathTimer, world_entities::Direction};
+use crate::world_entities::Direction;
 
 const ANIMATION_FRAME_DURATION: f32 = 0.1;
 
@@ -83,7 +83,7 @@ impl<TT> AnimationController<TT> {
 }
 
 pub fn get_death_frame<TT>(
-    death_timer: &DeathTimer,
+    death_timer: &Timer,
     death_animation_frames: &'static [(AnimationRenderFrame<TT>, u32)],
 ) -> &'static AnimationRenderFrame<TT> {
     let fraction = death_timer.fraction();

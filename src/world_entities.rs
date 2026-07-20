@@ -103,6 +103,14 @@ pub enum BonusType {
 #[derive(Component, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
 pub struct MovementSpeed(pub f32);
 
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub enum ActorState {
+    Alive,
+    Dying(Timer),
+    // Exclusively for players
+    Victory(Timer),
+}
+
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
 

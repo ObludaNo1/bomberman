@@ -3,11 +3,10 @@ use rand::RngExt;
 
 use crate::{
     animation::MovementDirection,
-    death::DeathTimer,
     enemy::EnemyRngGen,
     map::WorldMap,
     position::{TilePosition, WorldPosition},
-    world_entities::{Direction, Enemy, MovementMultiplier, MovementSpeed},
+    world_entities::{ActorState, Direction, Enemy, MovementMultiplier, MovementSpeed},
 };
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
@@ -211,9 +210,10 @@ pub fn move_enemies(
             &mut MovementDirection,
             &mut EnemyMovement,
             &MovementSpeed,
+            &ActorState,
             Option<&MovementMultiplier>,
         ),
-        (With<Enemy>, Without<DeathTimer>),
+        With<Enemy>,
     >,
     collision_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,
@@ -221,13 +221,15 @@ pub fn move_enemies(
 ) {
     let delta_secs = time.delta_secs();
 
-    for (mut position, mut animation_dir, mut movement, speed, movement_multiplier) in
+    for (mut position, mut animation_dir, mut movement, speed, state, movement_multiplier) in
         enemies.iter_mut()
     {
-        move_enemy(
-            &mut position, &mut animation_dir, &mut movement, speed, movement_multiplier,
-            &collision_map, delta_secs, &mut enemy_rng_gen,
-        );
+        if matches!(state, ActorState::Alive) {
+            move_enemy(
+                &mut position, &mut animation_dir, &mut movement, speed, movement_multiplier,
+                &collision_map, delta_secs, &mut enemy_rng_gen,
+            );
+        }
     }
 }
 

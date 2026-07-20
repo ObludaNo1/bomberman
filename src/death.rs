@@ -8,7 +8,8 @@ use crate::{
     position::WorldPosition,
     sound::EffectKind,
     world_entities::{
-        AllEnemiesKilled, AllEnemiesKilledEvent, Character, Enemy, GameplaySet, Killable,
+        ActorState, AllEnemiesKilled, AllEnemiesKilledEvent, Character, Enemy, GameplaySet,
+        Killable,
     },
 };
 
@@ -18,19 +19,6 @@ const ENEMY_KILL_DISTANCE: f32 = 0.75;
 
 const ENEMY_DEATH_DURATION: Duration = Duration::from_secs(1);
 const CHARACTER_DEATH_DURATION: Duration = Duration::from_secs(3);
-
-#[derive(Component)]
-pub struct DeathTimer(Timer);
-
-impl DeathTimer {
-    fn new(duration: Duration) -> Self {
-        DeathTimer(Timer::new(duration, TimerMode::Once))
-    }
-
-    pub fn fraction(&self) -> f32 {
-        self.0.fraction()
-    }
-}
 
 fn manhattan_distance(pos1: Vec2, pos2: Vec2) -> f32 {
     (pos1.x - pos2.x).abs() + (pos1.y - pos2.y).abs()
@@ -55,88 +43,92 @@ fn check_kill_from_explosion(world_position: WorldPosition, world_map: &WorldMap
 
 fn check_explosion_entity_kills(
     mut commands: Commands,
-    non_characters: Query<
-        (Entity, &WorldPosition),
-        (With<Killable>, Without<Character>, Without<DeathTimer>),
-    >,
-    character: Query<
-        (Entity, &WorldPosition),
-        (With<Killable>, With<Character>, Without<DeathTimer>),
-    >,
+    non_characters: Query<(&WorldPosition, &mut ActorState), (With<Killable>, Without<Character>)>,
+    character: Query<(&WorldPosition, &mut ActorState), (With<Killable>, With<Character>)>,
     world_map: Res<WorldMap>,
 ) {
-    for (entity, world_position) in non_characters {
-        if check_kill_from_explosion(*world_position, &world_map) {
-            commands
-                .entity(entity)
-                .insert(DeathTimer::new(ENEMY_DEATH_DURATION));
-            commands.trigger(EffectKind::EnemyDeath);
+    for (world_position, mut state) in non_characters {
+        if matches!(state.as_ref(), ActorState::Alive) {
+            if check_kill_from_explosion(*world_position, &world_map) {
+                *state = ActorState::Dying(Timer::new(ENEMY_DEATH_DURATION, TimerMode::Once));
+                commands.trigger(EffectKind::EnemyDeath);
+            }
         }
     }
-    for (entity, world_position) in character {
-        if check_kill_from_explosion(*world_position, &world_map) {
-            commands
-                .entity(entity)
-                .insert(DeathTimer::new(CHARACTER_DEATH_DURATION));
-            commands.trigger(EffectKind::CharacterDeath);
-        }
-    }
-}
-
-fn kill_character_near_enemy(
-    mut commands: Commands,
-    enemies: Query<&WorldPosition, (With<Enemy>, Without<DeathTimer>)>,
-    characters: Query<(Entity, &WorldPosition), (With<Character>, Without<DeathTimer>)>,
-) {
-    for enemy_pos in enemies {
-        // Only one character is expected at a time. No optimization needed
-        for (entity, character_pos) in characters {
-            if enemy_pos.0.distance(character_pos.0) < ENEMY_KILL_DISTANCE {
-                commands
-                    .entity(entity)
-                    .insert(DeathTimer::new(CHARACTER_DEATH_DURATION));
+    for (world_position, mut state) in character {
+        if matches!(state.as_ref(), ActorState::Alive) {
+            if check_kill_from_explosion(*world_position, &world_map) {
+                *state = ActorState::Dying(Timer::new(CHARACTER_DEATH_DURATION, TimerMode::Once));
                 commands.trigger(EffectKind::CharacterDeath);
             }
         }
     }
 }
 
+fn kill_character_near_enemy(
+    mut commands: Commands,
+    enemies: Query<&WorldPosition, With<Enemy>>,
+    mut characters: Query<(&WorldPosition, &mut ActorState), With<Character>>,
+) {
+    for enemy_pos in enemies {
+        // Only one character is expected at a time. No optimization needed
+        for (character_pos, mut state) in characters.iter_mut() {
+            if matches!(state.as_ref(), ActorState::Alive) {
+                if enemy_pos.0.distance(character_pos.0) < ENEMY_KILL_DISTANCE {
+                    *state =
+                        ActorState::Dying(Timer::new(CHARACTER_DEATH_DURATION, TimerMode::Once));
+                    commands.trigger(EffectKind::CharacterDeath);
+                }
+            }
+        }
+    }
+}
+
 fn advance_death_timers(
-    mut non_characters: Query<&mut DeathTimer, Without<Character>>,
-    mut characters: Query<&mut DeathTimer, With<Character>>,
+    non_characters: Query<&mut ActorState, Without<Character>>,
+    characters: Query<&mut ActorState, With<Character>>,
     time: Res<Time>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    for mut death_timer in non_characters.iter_mut() {
-        death_timer.0.tick(time.delta());
+    let time_delta = time.delta();
+    for mut state in non_characters {
+        if let ActorState::Dying(timer) = state.as_mut() {
+            timer.tick(time_delta);
+        }
     }
 
-    for mut death_timer in characters.iter_mut() {
-        death_timer.0.tick(time.delta());
-        if death_timer.0.is_finished() {
-            next_state.set(GameState::MainMenu);
+    for mut state in characters {
+        if let ActorState::Dying(timer) = state.as_mut() {
+            timer.tick(time_delta);
+            if timer.is_finished() {
+                next_state.set(GameState::MainMenu);
+            }
         }
     }
 }
 
 fn end_game_on_death(
-    characters: Query<&DeathTimer, With<Character>>,
+    characters: Query<&ActorState, With<Character>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    for death_timer in characters.iter() {
-        if death_timer.0.is_finished() {
-            next_state.set(GameState::MainMenu);
+    for death_timer in characters {
+        if let ActorState::Dying(timer) = death_timer {
+            if timer.is_finished() {
+                next_state.set(GameState::MainMenu);
+            }
         }
     }
 }
 
 fn despawn_killed_enemies(
     mut commands: Commands,
-    enemies: Query<(Entity, &DeathTimer), With<Enemy>>,
+    enemies: Query<(Entity, &ActorState), With<Enemy>>,
 ) {
     for (entity, death_timer) in enemies.iter() {
-        if death_timer.0.is_finished() {
-            commands.entity(entity).despawn();
+        if let ActorState::Dying(timer) = death_timer {
+            if timer.is_finished() {
+                commands.entity(entity).despawn();
+            }
         }
     }
 }

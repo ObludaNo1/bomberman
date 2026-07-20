@@ -4,13 +4,12 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    death::DeathTimer,
     game_state::GameState,
     map::WorldMap,
     position::WorldPosition,
     sound::EffectKind,
     util::RenderScale,
-    world_entities::{Character, Direction, MovementSpeed},
+    world_entities::{ActorState, Character, Direction, MovementSpeed},
 };
 
 const WINNING_TRIGGER_DISTANCE: f32 = 0.5;
@@ -20,24 +19,22 @@ fn manhattan_distance(pos1: WorldPosition, pos2: WorldPosition) -> f32 {
     (pos1.x - pos2.x).abs() + (pos1.y - pos2.y).abs()
 }
 
-#[derive(Component, Deref, DerefMut)]
-pub struct VictoryTimer(pub Timer);
-
 pub fn check_for_win(
-    mut commands: Commands,
-    characters: Query<(Entity, &WorldPosition), (With<Character>, Without<VictoryTimer>)>,
+    characters: Query<(&WorldPosition, &mut ActorState), With<Character>>,
     world_map: Res<WorldMap>,
 ) {
-    for (entity, player_pos) in characters {
-        if let Some(open_exit_position) = world_map.open_exit_position() {
-            if manhattan_distance(*player_pos, open_exit_position.to_world_position())
-                < WINNING_TRIGGER_DISTANCE
-            {
-                commands.entity(entity).insert((
-                    VictoryTimer(Timer::new(VICTORY_ANIMATION_DURATION, TimerMode::Once)),
-                    RenderScale(1.0),
-                ));
-                break;
+    for (player_pos, mut state) in characters {
+        if matches!(state.as_ref(), ActorState::Alive) {
+            if let Some(open_exit_position) = world_map.open_exit_position() {
+                if manhattan_distance(*player_pos, open_exit_position.to_world_position())
+                    < WINNING_TRIGGER_DISTANCE
+                {
+                    *state = ActorState::Victory(Timer::new(
+                        VICTORY_ANIMATION_DURATION,
+                        TimerMode::Once,
+                    ));
+                    break;
+                }
             }
         }
     }
@@ -50,11 +47,11 @@ pub fn victory_ending(
         (
             &mut WorldPosition,
             &mut MovementDirection,
-            &mut VictoryTimer,
+            &mut ActorState,
             &mut RenderScale,
             &MovementSpeed,
         ),
-        (With<Character>, Without<DeathTimer>),
+        With<Character>,
     >,
     world_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,
@@ -66,14 +63,13 @@ pub fn victory_ending(
     };
     let gate_pos = gate_pos.to_world_position();
 
-    for (
-        mut world_position,
-        mut animation_dir,
-        mut victory_timer,
-        mut render_scale,
-        movement_speed,
-    ) in characters.iter_mut()
+    for (mut world_position, mut animation_dir, mut state, mut render_scale, movement_speed) in
+        characters.iter_mut()
     {
+        let ActorState::Victory(victory_timer) = state.as_mut() else {
+            continue;
+        };
+
         let dir = gate_pos.0 - world_position.0;
         let len = dir.length();
         let step_distance = delta_time.as_secs_f32() * movement_speed.0;
@@ -84,7 +80,7 @@ pub fn victory_ending(
         } else {
             world_position.0 = gate_pos.0;
             let remaining_step_duration = delta_time.as_secs_f32() * (1.0 - len / step_distance);
-            if victory_timer.0.elapsed() == Duration::ZERO {
+            if victory_timer.elapsed() == Duration::ZERO {
                 commands.trigger(EffectKind::Victory);
             }
             victory_timer.tick(Duration::from_secs_f32(remaining_step_duration));

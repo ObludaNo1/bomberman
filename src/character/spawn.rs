@@ -9,7 +9,10 @@ use crate::{
     character::animation::get_character_animation_frames,
     position::WorldPosition,
     rendering::MeshHandle,
-    world_entities::{BombCount, BombRange, Character, InGameEntity, Killable, MovementSpeed},
+    util::RenderScale,
+    world_entities::{
+        ActorState, BombCount, BombRange, Character, InGameEntity, Killable, MovementSpeed,
+    },
 };
 
 const CHARACTER_SPEED: f32 = 2.0;
@@ -35,6 +38,7 @@ pub fn spawn_character(
         Character,
         Killable,
         InGameEntity,
+        ActorState::Alive,
         WorldPosition(spawn_position),
         Mesh2d(mesh_handle.0.clone()),
         MeshMaterial2d(character_material),
@@ -44,5 +48,6 @@ pub fn spawn_character(
         MovementSpeed(CHARACTER_SPEED),
         BombRange::default(),
         BombCount::default(),
+        RenderScale(1.0),
     ));
 }
