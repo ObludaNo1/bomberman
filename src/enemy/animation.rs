@@ -12,7 +12,7 @@ use crate::{
     world_entities::{ActorState, Direction, Enemy},
 };
 
-const ENEMY_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
+const ZOMBIE_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
     ANIMATION_FRAME_COUNT] = [
     AnimationRenderFrame::new(EnemyTileType::ZombieDown2, false),
     AnimationRenderFrame::new(EnemyTileType::ZombieDown1, false),
@@ -20,7 +20,7 @@ const ENEMY_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
     AnimationRenderFrame::new(EnemyTileType::ZombieDown3, false),
 ];
 
-const ENEMY_ANIMATION_FRAMES_MOVING_UP: [AnimationRenderFrame<EnemyTileType>;
+const ZOMBIE_ANIMATION_FRAMES_MOVING_UP: [AnimationRenderFrame<EnemyTileType>;
     ANIMATION_FRAME_COUNT] = [
     AnimationRenderFrame::new(EnemyTileType::ZombieUp2, false),
     AnimationRenderFrame::new(EnemyTileType::ZombieUp1, false),
@@ -28,7 +28,7 @@ const ENEMY_ANIMATION_FRAMES_MOVING_UP: [AnimationRenderFrame<EnemyTileType>;
     AnimationRenderFrame::new(EnemyTileType::ZombieUp3, false),
 ];
 
-const ENEMY_ANIMATION_FRAMES_MOVING_LEFT: [AnimationRenderFrame<EnemyTileType>;
+const ZOMBIE_ANIMATION_FRAMES_MOVING_LEFT: [AnimationRenderFrame<EnemyTileType>;
     ANIMATION_FRAME_COUNT] = [
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft2, false),
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft1, false),
@@ -36,7 +36,7 @@ const ENEMY_ANIMATION_FRAMES_MOVING_LEFT: [AnimationRenderFrame<EnemyTileType>;
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft3, false),
 ];
 
-const ENEMY_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
+const ZOMBIE_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
     ANIMATION_FRAME_COUNT] = [
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft2, true),
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft1, true),
@@ -44,23 +44,65 @@ const ENEMY_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
     AnimationRenderFrame::new(EnemyTileType::ZombieLeft3, true),
 ];
 
-pub fn get_enemy_animation_frames(
+const GHOST_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::GhostDown2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostDown1, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostDown2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostDown3, false),
+];
+
+const GHOST_ANIMATION_FRAMES_MOVING_UP: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::GhostUp2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostUp1, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostUp2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostUp3, false),
+];
+
+const GHOST_ANIMATION_FRAMES_MOVING_LEFT: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft1, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft2, false),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft3, false),
+];
+
+const GHOST_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft2, true),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft1, true),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft2, true),
+    AnimationRenderFrame::new(EnemyTileType::GhostLeft3, true),
+];
+
+pub fn get_zombie_animation_frames(
     direction: Direction,
-) -> &'static [crate::animation::AnimationRenderFrame<EnemyTileType>;
-             crate::animation::ANIMATION_FRAME_COUNT] {
+) -> &'static [AnimationRenderFrame<EnemyTileType>; ANIMATION_FRAME_COUNT] {
     match direction {
-        Direction::Up => &ENEMY_ANIMATION_FRAMES_MOVING_UP,
-        Direction::Down => &ENEMY_ANIMATION_FRAMES_MOVING_DOWN,
-        Direction::Left => &ENEMY_ANIMATION_FRAMES_MOVING_LEFT,
-        Direction::Right => &ENEMY_ANIMATION_FRAMES_MOVING_RIGHT,
+        Direction::Up => &ZOMBIE_ANIMATION_FRAMES_MOVING_UP,
+        Direction::Down => &ZOMBIE_ANIMATION_FRAMES_MOVING_DOWN,
+        Direction::Left => &ZOMBIE_ANIMATION_FRAMES_MOVING_LEFT,
+        Direction::Right => &ZOMBIE_ANIMATION_FRAMES_MOVING_RIGHT,
     }
 }
 
-const ENEMY_DEATH_ANIMATION_FRAME_COUNT: usize = 5;
+pub fn get_ghost_animation_frames(
+    direction: Direction,
+) -> &'static [AnimationRenderFrame<EnemyTileType>; ANIMATION_FRAME_COUNT] {
+    match direction {
+        Direction::Up => &GHOST_ANIMATION_FRAMES_MOVING_UP,
+        Direction::Down => &GHOST_ANIMATION_FRAMES_MOVING_DOWN,
+        Direction::Left => &GHOST_ANIMATION_FRAMES_MOVING_LEFT,
+        Direction::Right => &GHOST_ANIMATION_FRAMES_MOVING_RIGHT,
+    }
+}
+
+const ZOMBIE_DEATH_ANIMATION_FRAME_COUNT: usize = 5;
 
 /// Animation frame and its weight for death animation.
-const DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
-    ENEMY_DEATH_ANIMATION_FRAME_COUNT] = [
+const ZOMBIE_DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
+    ZOMBIE_DEATH_ANIMATION_FRAME_COUNT] = [
     (
         AnimationRenderFrame::new(EnemyTileType::ZombieDown2, false),
         2,
@@ -83,25 +125,52 @@ const DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
     ),
 ];
 
+const GHOST_DEATH_ANIMATION_FRAME_COUNT: usize = 5;
+const GHOST_DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
+    GHOST_DEATH_ANIMATION_FRAME_COUNT] = [
+    (
+        AnimationRenderFrame::new(EnemyTileType::GhostDown2, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::GhostDeath1, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::GhostDeath2, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::GhostDeath3, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::GhostDeath4, false),
+        1,
+    ),
+];
+
 pub fn animate_enemies(
-    mut query: Query<
-        (
-            &mut AnimationController<EnemyTileType>,
-            &MovementDirection,
-            &MeshMaterial2d<ColouringMaterial>,
-            &ActorState,
-        ),
-        With<Enemy>,
-    >,
+    mut query: Query<(
+        &Enemy,
+        &mut AnimationController<EnemyTileType>,
+        &MovementDirection,
+        &MeshMaterial2d<ColouringMaterial>,
+        &ActorState,
+    )>,
     mut materials: ResMut<Assets<ColouringMaterial>>,
     time: Res<Time>,
 ) {
     let delta_time = time.delta();
-    for (mut animation_controller, movement_direction, material_handle, death_timer) in
+    for (enemy, mut animation_controller, movement_direction, material_handle, death_timer) in
         query.iter_mut()
     {
         let frame = if let ActorState::Dying(death_timer) = death_timer {
-            get_death_frame(death_timer, &DEATH_ANIMATION_FRAMES)
+            let death_animation_frames = match enemy {
+                Enemy::Zombie => &ZOMBIE_DEATH_ANIMATION_FRAMES,
+                Enemy::Ghost => &GHOST_DEATH_ANIMATION_FRAMES,
+            };
+            get_death_frame(death_timer, death_animation_frames)
         } else {
             animation_controller.update(delta_time, *movement_direction);
             animation_controller.current_frame()

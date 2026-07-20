@@ -12,9 +12,9 @@ use crate::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
-    constants::ENEMIES_SPAWNED,
+    constants::{GHOST_SPEED, GHOSTS_SPAWNED, ZOMBIE_SPEED, ZOMBIES_SPAWNED},
     enemy::{
-        animation::{animate_enemies, get_enemy_animation_frames},
+        animation::{animate_enemies, get_ghost_animation_frames, get_zombie_animation_frames},
         movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
     },
     game_state::GameState,
@@ -50,9 +50,18 @@ fn spawn_enemies(
         .collect::<Vec<_>>();
     free_locations.shuffle(&mut enemy_rng_gen);
 
-    for tile in free_locations.into_iter().take(ENEMIES_SPAWNED) {
+    for (tile, (enemy, speed)) in free_locations.into_iter().zip(
+        (0..ZOMBIES_SPAWNED)
+            .map(|_| (Enemy::Zombie, ZOMBIE_SPEED))
+            .chain((0..GHOSTS_SPAWNED).map(|_| (Enemy::Ghost, GHOST_SPEED))),
+    ) {
+        let animation_function = match enemy {
+            Enemy::Zombie => get_zombie_animation_frames,
+            Enemy::Ghost => get_ghost_animation_frames,
+        };
+
         commands.spawn((
-            Enemy,
+            enemy,
             Killable,
             InGameEntity,
             ActorState::Alive,
@@ -60,10 +69,10 @@ fn spawn_enemies(
             Mesh2d(mesh_handle.0.clone()),
             MeshMaterial2d(material.add(enemy_material.clone())),
             Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
-            AnimationController::<EnemyTileType>::new(get_enemy_animation_frames),
+            AnimationController::<EnemyTileType>::new(animation_function),
             EnemyMovement::new(tile),
             MovementDirection(None),
-            MovementSpeed(1.5),
+            MovementSpeed(speed),
         ));
     }
 }

@@ -6,8 +6,11 @@ pub use bonuses::*;
 #[derive(Component)]
 pub struct Character;
 
-#[derive(Component)]
-pub struct Enemy;
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Enemy {
+    Zombie,
+    Ghost,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Direction {
