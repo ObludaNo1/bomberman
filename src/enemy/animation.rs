@@ -76,6 +76,38 @@ const GHOST_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
     AnimationRenderFrame::new(EnemyTileType::GhostLeft3, true),
 ];
 
+const HOODIE_ANIMATION_FRAMES_MOVING_DOWN: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::HoodieDown2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieDown1, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieDown2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieDown3, false),
+];
+
+const HOODIE_ANIMATION_FRAMES_MOVING_UP: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::HoodieUp2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieUp1, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieUp2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieUp3, false),
+];
+
+const HOODIE_ANIMATION_FRAMES_MOVING_LEFT: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft1, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft2, false),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft3, false),
+];
+
+const HOODIE_ANIMATION_FRAMES_MOVING_RIGHT: [AnimationRenderFrame<EnemyTileType>;
+    ANIMATION_FRAME_COUNT] = [
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft2, true),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft1, true),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft2, true),
+    AnimationRenderFrame::new(EnemyTileType::HoodieLeft3, true),
+];
+
 pub fn get_zombie_animation_frames(
     direction: Direction,
 ) -> &'static [AnimationRenderFrame<EnemyTileType>; ANIMATION_FRAME_COUNT] {
@@ -95,6 +127,17 @@ pub fn get_ghost_animation_frames(
         Direction::Down => &GHOST_ANIMATION_FRAMES_MOVING_DOWN,
         Direction::Left => &GHOST_ANIMATION_FRAMES_MOVING_LEFT,
         Direction::Right => &GHOST_ANIMATION_FRAMES_MOVING_RIGHT,
+    }
+}
+
+pub fn get_hoodie_animation_frames(
+    direction: Direction,
+) -> &'static [AnimationRenderFrame<EnemyTileType>; ANIMATION_FRAME_COUNT] {
+    match direction {
+        Direction::Up => &HOODIE_ANIMATION_FRAMES_MOVING_UP,
+        Direction::Down => &HOODIE_ANIMATION_FRAMES_MOVING_DOWN,
+        Direction::Left => &HOODIE_ANIMATION_FRAMES_MOVING_LEFT,
+        Direction::Right => &HOODIE_ANIMATION_FRAMES_MOVING_RIGHT,
     }
 }
 
@@ -150,6 +193,27 @@ const GHOST_DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
     ),
 ];
 
+const HOODIE_DEATH_ANIMATION_FRAME_COUNT: usize = 4;
+const HOODIE_DEATH_ANIMATION_FRAMES: [(AnimationRenderFrame<EnemyTileType>, u32);
+    HOODIE_DEATH_ANIMATION_FRAME_COUNT] = [
+    (
+        AnimationRenderFrame::new(EnemyTileType::HoodieDown2, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::HoodieDeath1, false),
+        2,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::HoodieDeath2, false),
+        1,
+    ),
+    (
+        AnimationRenderFrame::new(EnemyTileType::HoodieDeath3, false),
+        1,
+    ),
+];
+
 pub fn animate_enemies(
     mut query: Query<(
         &Enemy,
@@ -166,10 +230,12 @@ pub fn animate_enemies(
         query.iter_mut()
     {
         let frame = if let ActorState::Dying(death_timer) = death_timer {
-            let death_animation_frames = match enemy {
-                Enemy::Zombie => &ZOMBIE_DEATH_ANIMATION_FRAMES,
-                Enemy::Ghost => &GHOST_DEATH_ANIMATION_FRAMES,
-            };
+            let death_animation_frames: &'static [(AnimationRenderFrame<EnemyTileType>, u32)] =
+                match enemy {
+                    Enemy::Zombie => &ZOMBIE_DEATH_ANIMATION_FRAMES,
+                    Enemy::Ghost => &GHOST_DEATH_ANIMATION_FRAMES,
+                    Enemy::Hoodie => &HOODIE_DEATH_ANIMATION_FRAMES,
+                };
             get_death_frame(death_timer, death_animation_frames)
         } else {
             animation_controller.update(delta_time, *movement_direction);

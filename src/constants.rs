@@ -12,3 +12,5 @@ pub const ZOMBIES_SPAWNED: usize = 4;
 pub const ZOMBIE_SPEED: f32 = 1.2;
 pub const GHOSTS_SPAWNED: usize = 2;
 pub const GHOST_SPEED: f32 = 2.4;
+pub const HOODIES_SPAWNED: usize = 2;
+pub const HOODIE_SPEED: f32 = 1.8;

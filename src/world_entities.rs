@@ -12,6 +12,7 @@ pub struct Character;
 pub enum Enemy {
     Zombie,
     Ghost,
+    Hoodie,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

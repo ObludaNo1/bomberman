@@ -13,9 +13,14 @@ use crate::{
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
-    constants::{GHOST_SPEED, GHOSTS_SPAWNED, ZOMBIE_SPEED, ZOMBIES_SPAWNED},
+    constants::{
+        GHOST_SPEED, GHOSTS_SPAWNED, HOODIE_SPEED, HOODIES_SPAWNED, ZOMBIE_SPEED, ZOMBIES_SPAWNED,
+    },
     enemy::{
-        animation::{animate_enemies, get_ghost_animation_frames, get_zombie_animation_frames},
+        animation::{
+            animate_enemies, get_ghost_animation_frames, get_hoodie_animation_frames,
+            get_zombie_animation_frames,
+        },
         movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
     },
     game_state::GameState,
@@ -61,11 +66,13 @@ fn spawn_single_enemy(
     let animation_function = match enemy {
         Enemy::Zombie => get_zombie_animation_frames,
         Enemy::Ghost => get_ghost_animation_frames,
+        Enemy::Hoodie => get_hoodie_animation_frames,
     };
 
     let movement_speed = match enemy {
         Enemy::Zombie => ZOMBIE_SPEED,
         Enemy::Ghost => GHOST_SPEED,
+        Enemy::Hoodie => HOODIE_SPEED,
     };
 
     commands.spawn((
@@ -100,7 +107,8 @@ fn setup_spawn_enemies(
     for (tile, enemy) in free_locations.into_iter().zip(
         (0..ZOMBIES_SPAWNED)
             .map(|_| Enemy::Zombie)
-            .chain((0..GHOSTS_SPAWNED).map(|_| Enemy::Ghost)),
+            .chain((0..GHOSTS_SPAWNED).map(|_| Enemy::Ghost))
+            .chain((0..HOODIES_SPAWNED).map(|_| Enemy::Hoodie)),
     ) {
         spawn_single_enemy(
             enemy,
