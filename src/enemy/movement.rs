@@ -1,12 +1,13 @@
 use bevy::prelude::*;
+use pathfinding::directed::astar::astar;
 use rand::RngExt;
 
 use crate::{
     animation::MovementDirection,
-    enemy::EnemyRngGen,
+    enemy::{EnemyRngGen, PlayerChasingEnemy},
     map::WorldMap,
     position::{TilePosition, WorldPosition},
-    world_entities::{ActorState, Direction, Enemy, MovementMultiplier, MovementSpeed},
+    world_entities::{ActorState, Character, Direction, Enemy, MovementMultiplier, MovementSpeed},
 };
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
@@ -140,6 +141,45 @@ fn choose_next_tile(
     return position;
 }
 
+fn next_tile_to_player(
+    from: TilePosition,
+    player_pos: WorldPosition,
+    world_map: &WorldMap,
+) -> Option<TilePosition> {
+    let player_closest_tile = player_pos.to_closest_tile();
+    let result = astar(
+        &from,
+        |tile| {
+            world_map
+                .tile_neighbours(*tile)
+                .filter_map(|(pos, tile)| tile.is_walkable().then_some((pos, 1)))
+        },
+        |tile| tile.manhattan_distance(&player_closest_tile),
+        |tile| tile == &player_closest_tile,
+    );
+    result.map(|(path, _)| path.get(1).copied()).flatten()
+}
+
+fn get_next_tile(
+    preferred_dir: Vec2,
+    current_tile: TilePosition,
+    world_map: &WorldMap,
+    rng_gen: &mut EnemyRngGen,
+    pathfinding: bool,
+    player_pos: Option<WorldPosition>,
+) -> TilePosition {
+    let path_found_tile = if let Some(player_pos) = player_pos
+        && pathfinding
+    {
+        next_tile_to_player(current_tile, player_pos, world_map)
+    } else {
+        None
+    };
+
+    path_found_tile
+        .unwrap_or_else(|| choose_next_tile(&preferred_dir, current_tile, world_map, rng_gen))
+}
+
 fn move_enemy(
     position: &mut WorldPosition,
     animation: &mut MovementDirection,
@@ -149,6 +189,8 @@ fn move_enemy(
     world_map: &WorldMap,
     delta_secs: f32,
     enemy_rng_gen: &mut EnemyRngGen,
+    pathfinding: bool,
+    player_pos: Option<WorldPosition>,
 ) {
     let mut step_distance =
         speed.0 * delta_secs * movement_multiplier.map(|mm| mm.multiplier).unwrap_or(1.0);
@@ -168,11 +210,11 @@ fn move_enemy(
                 .map(|dir| dir.to_vec2())
                 .unwrap_or_else(|| movement_dir_unnormalized);
 
-            let next_tile = choose_next_tile(
-                &next_tile_dir,
+            let next_tile = get_next_tile(
+                next_tile_dir,
                 // enemy has already reached the desired tile, so we can use its coordinates as
                 // the current position
-                desired_pos, world_map, enemy_rng_gen,
+                desired_pos, world_map, enemy_rng_gen, pathfinding, player_pos,
             );
 
             movement.desired_position = next_tile;
@@ -197,8 +239,14 @@ fn move_enemy(
         // or an explosion started on that tile. In the second case an enemy is either close to the
         // explosion and dies anyway or it will be the previous tile.
         let new_tile = position.to_closest_tile();
-        movement.desired_position =
-            choose_next_tile(&Vec2::ZERO, new_tile, world_map, enemy_rng_gen);
+        movement.desired_position = get_next_tile(
+            Vec2::ZERO,
+            new_tile,
+            world_map,
+            enemy_rng_gen,
+            pathfinding,
+            player_pos,
+        );
         movement.last_direction = None;
     }
 }
@@ -212,22 +260,34 @@ pub fn move_enemies(
             &MovementSpeed,
             &ActorState,
             Option<&MovementMultiplier>,
+            Option<&PlayerChasingEnemy>,
         ),
         With<Enemy>,
     >,
+    players: Query<&WorldPosition, (With<Character>, Without<Enemy>)>,
     collision_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,
     mut enemy_rng_gen: ResMut<EnemyRngGen>,
 ) {
     let delta_secs = time.delta_secs();
 
-    for (mut position, mut animation_dir, mut movement, speed, state, movement_multiplier) in
-        enemies.iter_mut()
+    let player_pos = players.single().ok().copied();
+
+    for (
+        mut position,
+        mut animation_dir,
+        mut movement,
+        speed,
+        state,
+        movement_multiplier,
+        chasing_player,
+    ) in enemies.iter_mut()
     {
         if matches!(state, ActorState::Alive) {
+            let pathfinding = chasing_player.is_some();
             move_enemy(
                 &mut position, &mut animation_dir, &mut movement, speed, movement_multiplier,
-                &collision_map, delta_secs, &mut enemy_rng_gen,
+                &collision_map, delta_secs, &mut enemy_rng_gen, pathfinding, player_pos,
             );
         }
     }

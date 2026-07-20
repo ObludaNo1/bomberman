@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    constants::TOTAL_MAP_WIDTH,
     map::{WorldMap, map_tile::MapTile},
     position::{TilePosition, WorldPosition},
 };
@@ -57,6 +58,25 @@ impl<'world> WorldMap {
                 pos: bottom_right,
                 tile: self.get_tile(bottom_right)?,
             },
+        })
+    }
+}
+
+const INDICES_INCREMENTS: [isize; 4] =
+    [-1, 1, -(TOTAL_MAP_WIDTH as isize), TOTAL_MAP_WIDTH as isize];
+
+impl<'world> WorldMap {
+    pub fn tile_neighbours(
+        &'world self,
+        pos: TilePosition,
+    ) -> impl Iterator<Item = (TilePosition, &'world MapTile)> {
+        INDICES_INCREMENTS.clone().into_iter().filter_map(move |i| {
+            let base_index = Self::pos_to_index(pos)?;
+            let i = (base_index as isize + i) as usize;
+            let pos = Self::index_to_tile_pos(i);
+            let tile = self.get_tile(pos)?;
+
+            Some((pos, tile))
         })
     }
 }

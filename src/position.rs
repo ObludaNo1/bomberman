@@ -32,7 +32,7 @@ impl From<WorldPosition> for Vec2 {
 
 /// A component precisely representing a position in the tile grid.
 #[repr(transparent)]
-#[derive(Component, Debug, Deref, DerefMut, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Debug, Deref, DerefMut, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TilePosition(pub UVec2);
 
 impl TilePosition {
@@ -41,6 +41,12 @@ impl TilePosition {
             x: self.x as f32 - (TOTAL_MAP_WIDTH - 1) as f32 * 0.5,
             y: self.y as f32 - (TOTAL_MAP_HEIGHT - 1) as f32 * 0.5,
         })
+    }
+
+    pub fn manhattan_distance(&self, other: &TilePosition) -> u32 {
+        let dx = (self.x as i32 - other.x as i32).abs() as u32;
+        let dy = (self.y as i32 - other.y as i32).abs() as u32;
+        dx + dy
     }
 }
 

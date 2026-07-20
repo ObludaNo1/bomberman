@@ -41,6 +41,9 @@ struct EnemyRngGen(pub StdRng);
 #[derive(Resource, Debug, Deref, DerefMut)]
 struct EnemyTilesetMaterial(TilesetHandles<ColouringMaterial>);
 
+#[derive(Component)]
+struct PlayerChasingEnemy;
+
 fn prepare_enemy_material(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -75,20 +78,22 @@ fn spawn_single_enemy(
         Enemy::Hoodie => HOODIE_SPEED,
     };
 
-    commands.spawn((
-        enemy,
-        Killable,
-        InGameEntity,
-        ActorState::Alive,
-        position.to_world_position(),
-        Mesh2d(mesh_handle),
-        MeshMaterial2d(colouring_assets_storage.add(material.clone())),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
-        AnimationController::<EnemyTileType>::new(animation_function),
-        EnemyMovement::new(position),
-        MovementDirection(None),
-        MovementSpeed(movement_speed),
-    ));
+    commands
+        .spawn((
+            enemy,
+            Killable,
+            InGameEntity,
+            ActorState::Alive,
+            position.to_world_position(),
+            Mesh2d(mesh_handle),
+            MeshMaterial2d(colouring_assets_storage.add(material.clone())),
+            Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
+            AnimationController::<EnemyTileType>::new(animation_function),
+            EnemyMovement::new(position),
+            MovementDirection(None),
+            MovementSpeed(movement_speed),
+        ))
+        .insert_if(PlayerChasingEnemy, || enemy == Enemy::Hoodie);
 }
 
 fn setup_spawn_enemies(
