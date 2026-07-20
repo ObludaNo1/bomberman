@@ -23,7 +23,8 @@ use crate::{
     sound::EffectKind,
     world_entities::{
         AllEnemiesKilledEvent, Bomb, Bonus, BonusType, DestructibleWall, Explosion,
-        ExplosionNeedsSetup, GameplaySet, InGameEntity, MarkToDespawn, SpawnSystemSet,
+        ExplosionNeedsSetup, GameplaySet, InGameEntity, MarkToDespawn, SpawnEnemiesMessage,
+        SpawnSystemSet,
     },
 };
 
@@ -290,7 +291,12 @@ fn on_all_enemies_killed(
     map.open_exit();
 }
 
-fn process_map_in_tick(mut commands: Commands, mut map: ResMut<WorldMap>, time: Res<Time<Fixed>>) {
+fn process_map_in_tick(
+    mut commands: Commands,
+    mut spawn_event: MessageWriter<SpawnEnemiesMessage>,
+    mut map: ResMut<WorldMap>,
+    time: Res<Time<Fixed>>,
+) {
     map.process_tick(time.delta());
 
     let new_visuals = map.explode_bombs();
@@ -299,7 +305,10 @@ fn process_map_in_tick(mut commands: Commands, mut map: ResMut<WorldMap>, time: 
         commands.trigger(EffectKind::Explosion);
     }
 
-    for tile in map.tiles.iter_mut() {
+    for (index, tile) in map.tiles.iter_mut().enumerate() {
+        if tile.punish_player_for_exploding_this_tile() {
+            spawn_event.write(SpawnEnemiesMessage(WorldMap::index_to_tile_pos(index)));
+        };
         tile.convert_expired_entities();
     }
 }

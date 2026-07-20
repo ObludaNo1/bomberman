@@ -9,6 +9,7 @@ use rand::{SeedableRng, rngs::StdRng, seq::SliceRandom};
 use crate::{
     animation::{AnimationController, MovementDirection},
     assets::{
+        TilesetHandles,
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
@@ -19,10 +20,11 @@ use crate::{
     },
     game_state::GameState,
     map::WorldMap,
+    position::TilePosition,
     rendering::MeshHandle,
     world_entities::{
         ActorState, Enemy, GameplaySet, InGameEntity, Killable, MovementMultiplier, MovementSpeed,
-        SpawnSystemSet, SpeedUpEnemies,
+        SpawnEnemiesMessage, SpawnSystemSet, SpeedUpEnemies,
     },
 };
 
@@ -31,49 +33,107 @@ const ENEMY_RNG_SEED: u64 = 123456789;
 #[derive(Resource, Deref, DerefMut)]
 struct EnemyRngGen(pub StdRng);
 
-fn spawn_enemies(
+#[derive(Resource, Debug, Deref, DerefMut)]
+struct EnemyTilesetMaterial(TilesetHandles<ColouringMaterial>);
+
+fn prepare_enemy_material(
     mut commands: Commands,
-    world_map: Res<WorldMap>,
     asset_server: Res<AssetServer>,
     mut material: ResMut<Assets<ColouringMaterial>>,
-    mesh_handle: Res<MeshHandle>,
-    mut enemy_rng_gen: ResMut<EnemyRngGen>,
 ) {
     let enemy_tileset_material =
         enemy_tileset::prepare_tilemap_material(&asset_server, &mut material);
-    let Some(enemy_material) = material.get(&enemy_tileset_material.0).cloned() else {
+    commands.insert_resource(EnemyTilesetMaterial(enemy_tileset_material));
+}
+
+fn spawn_single_enemy(
+    enemy: Enemy,
+    position: TilePosition,
+    commands: &mut Commands,
+    colouring_assets_storage: &mut Assets<ColouringMaterial>,
+    mesh_handle: Handle<Mesh>,
+    material_handle: Handle<ColouringMaterial>,
+) {
+    let Some(material) = colouring_assets_storage.get(&material_handle).cloned() else {
         return;
     };
 
+    let animation_function = match enemy {
+        Enemy::Zombie => get_zombie_animation_frames,
+        Enemy::Ghost => get_ghost_animation_frames,
+    };
+
+    let movement_speed = match enemy {
+        Enemy::Zombie => ZOMBIE_SPEED,
+        Enemy::Ghost => GHOST_SPEED,
+    };
+
+    commands.spawn((
+        enemy,
+        Killable,
+        InGameEntity,
+        ActorState::Alive,
+        position.to_world_position(),
+        Mesh2d(mesh_handle),
+        MeshMaterial2d(colouring_assets_storage.add(material.clone())),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
+        AnimationController::<EnemyTileType>::new(animation_function),
+        EnemyMovement::new(position),
+        MovementDirection(None),
+        MovementSpeed(movement_speed),
+    ));
+}
+
+fn setup_spawn_enemies(
+    mut commands: Commands,
+    world_map: Res<WorldMap>,
+    mut enemy_rng_gen: ResMut<EnemyRngGen>,
+    mut material_assets: ResMut<Assets<ColouringMaterial>>,
+    mesh_handle: Res<MeshHandle>,
+    enemy_material: Res<EnemyTilesetMaterial>,
+) {
     let mut free_locations = world_map
         .iter_empty_non_starting_tiles()
         .collect::<Vec<_>>();
     free_locations.shuffle(&mut enemy_rng_gen);
 
-    for (tile, (enemy, speed)) in free_locations.into_iter().zip(
+    for (tile, enemy) in free_locations.into_iter().zip(
         (0..ZOMBIES_SPAWNED)
-            .map(|_| (Enemy::Zombie, ZOMBIE_SPEED))
-            .chain((0..GHOSTS_SPAWNED).map(|_| (Enemy::Ghost, GHOST_SPEED))),
+            .map(|_| Enemy::Zombie)
+            .chain((0..GHOSTS_SPAWNED).map(|_| Enemy::Ghost)),
     ) {
-        let animation_function = match enemy {
-            Enemy::Zombie => get_zombie_animation_frames,
-            Enemy::Ghost => get_ghost_animation_frames,
-        };
-
-        commands.spawn((
+        spawn_single_enemy(
             enemy,
-            Killable,
-            InGameEntity,
-            ActorState::Alive,
-            tile.to_world_position(),
-            Mesh2d(mesh_handle.0.clone()),
-            MeshMaterial2d(material.add(enemy_material.clone())),
-            Transform::from_translation(Vec3::new(0.0, 0.0, 2.5)),
-            AnimationController::<EnemyTileType>::new(animation_function),
-            EnemyMovement::new(tile),
-            MovementDirection(None),
-            MovementSpeed(speed),
-        ));
+            tile,
+            &mut commands,
+            &mut material_assets,
+            mesh_handle.0.clone(),
+            enemy_material.0.clone().0.clone(),
+        );
+    }
+}
+
+fn spawn_enemies_on_message(
+    mut commands: Commands,
+    mut spawn_event: MessageReader<SpawnEnemiesMessage>,
+    mut material_assets: ResMut<Assets<ColouringMaterial>>,
+    mesh_handle: Res<MeshHandle>,
+    enemy_material: Res<EnemyTilesetMaterial>,
+) {
+    if !spawn_event.is_empty() {
+        for spawn_position in spawn_event.read() {
+            for enemy in [Enemy::Zombie, Enemy::Zombie, Enemy::Ghost, Enemy::Ghost] {
+                spawn_single_enemy(
+                    enemy,
+                    spawn_position.0,
+                    &mut commands,
+                    &mut material_assets,
+                    mesh_handle.0.clone(),
+                    enemy_material.0.clone().0.clone(),
+                );
+            }
+        }
+        spawn_event.clear();
     }
 }
 
@@ -94,14 +154,21 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(EnemyRngGen(StdRng::seed_from_u64(ENEMY_RNG_SEED)))
+            .add_systems(Startup, prepare_enemy_material)
             .add_systems(
                 OnEnter(GameState::Playing),
-                spawn_enemies.in_set(SpawnSystemSet::SpawnEnemies),
+                setup_spawn_enemies.in_set(SpawnSystemSet::SpawnEnemies),
             )
             .add_observer(on_enemy_speed_up)
             .add_systems(
                 FixedUpdate,
-                (move_enemies, tick_enemy_temporal_bonuses).in_set(GameplaySet::Movement),
+                (
+                    spawn_enemies_on_message,
+                    move_enemies,
+                    tick_enemy_temporal_bonuses,
+                )
+                    .chain()
+                    .in_set(GameplaySet::Movement),
             )
             .add_systems(
                 Update,

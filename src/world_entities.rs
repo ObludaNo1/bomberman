@@ -3,6 +3,8 @@ mod bonuses;
 use bevy::prelude::*;
 pub use bonuses::*;
 
+use crate::position::TilePosition;
+
 #[derive(Component)]
 pub struct Character;
 
@@ -116,6 +118,9 @@ pub enum ActorState {
 
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
+
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpawnEnemiesMessage(pub TilePosition);
 
 #[derive(Resource)]
 pub struct AllEnemiesKilled;

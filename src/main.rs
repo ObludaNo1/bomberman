@@ -21,7 +21,7 @@ use bevy::{
 
 use crate::{
     game_state::GameState,
-    world_entities::{GameplaySet, SpawnSystemSet},
+    world_entities::{GameplaySet, SpawnEnemiesMessage, SpawnSystemSet},
 };
 
 fn get_assets_path() -> String {
@@ -57,6 +57,7 @@ fn main() {
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
         .add_plugins(sound::SoundPlugin)
+        .add_message::<SpawnEnemiesMessage>()
         .configure_sets(
             PreUpdate,
             GameplaySet::Controls.run_if(in_state(GameState::Playing)),

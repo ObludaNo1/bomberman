@@ -53,6 +53,13 @@ impl BombOrExplosionTile {
         }
     }
 
+    pub fn explosion(&self) -> Option<&ExplosionTile> {
+        match self {
+            BombOrExplosionTile::Bomb(_) => None,
+            BombOrExplosionTile::Explosion(explosion) => Some(explosion),
+        }
+    }
+
     pub fn is_bomb(&self) -> bool {
         match self {
             BombOrExplosionTile::Bomb(_) => true,
@@ -139,6 +146,18 @@ impl MapTile {
                 BombOrExplosionTile::Explosion(explosion) => explosion.0.tick(delta),
             };
         }
+    }
+
+    pub fn punish_player_for_exploding_this_tile(&self) -> bool {
+        self.base_type == BaseTile::Floor
+            && self
+                .special
+                .as_ref()
+                .is_some_and(|s| s != &SpecialTile::Bonus(BonusType::Negative))
+            && self
+                .bomb_or_explosion
+                .as_ref()
+                .is_some_and(|v| v.explosion().is_some_and(|e| e.0.is_finished()))
     }
 
     /// Converts expired breaking walls to floors and clears explosions that have finished.
