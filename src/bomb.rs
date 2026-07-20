@@ -19,7 +19,7 @@ use crate::{
     rendering::MeshHandle,
     util::RenderScale,
     world_entities::{
-        Bomb, BombCount, BombRange, Character, GameplaySet, InGameEntity, MarkToDespawn,
+        ActorState, Bomb, BombCount, BombRange, Character, GameplaySet, InGameEntity, MarkToDespawn,
     },
 };
 
@@ -29,7 +29,10 @@ const EXPLOSION_TICKS: u32 = 9;
 
 fn spawn_bomb_when_requested(
     mut commands: Commands,
-    mut characters: Query<(&WorldPosition, &BombRange, &mut BombCount), With<Character>>,
+    mut characters: Query<
+        (&WorldPosition, &BombRange, &mut BombCount, &ActorState),
+        With<Character>,
+    >,
     mut world_map: ResMut<WorldMap>,
     controls: Res<Controls>,
     bomb_assets: Res<BombAssets>,
@@ -47,7 +50,11 @@ fn spawn_bomb_when_requested(
     bomb_material.set_flip_x(false);
     let bomb_material = materials.add(bomb_material);
 
-    for (character_position, bomb_range, mut bomb_count) in characters.iter_mut() {
+    for (character_position, bomb_range, mut bomb_count, state) in characters.iter_mut() {
+        if !matches!(state, ActorState::Alive) {
+            continue;
+        }
+
         let bomb_position = character_position.to_closest_tile();
         if let Some(tile) = world_map.get_tile(bomb_position)
             && tile.is_walkable()
