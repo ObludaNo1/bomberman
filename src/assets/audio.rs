@@ -13,6 +13,7 @@ pub struct AudioAssets {
         Handle<AudioSource>,
         Handle<AudioSource>,
     ),
+    pub overtime: Handle<AudioSource>,
 }
 
 pub fn load_audio_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -28,5 +29,6 @@ pub fn load_audio_assets(mut commands: Commands, asset_server: Res<AssetServer>)
             // asset_server.load(format!("{AUDIO_PATH}/Explosion_03.wav")),
             asset_server.load(format!("{AUDIO_PATH}/Explosion_04.wav")),
         ),
+        overtime: asset_server.load(format!("{AUDIO_PATH}/Pickup_02.wav")),
     });
 }

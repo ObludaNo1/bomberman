@@ -14,6 +14,7 @@ use crate::{
             spawn_winning_screen,
         },
     },
+    sound::EffectKind,
     world_entities::GamePlayTimer,
 };
 
@@ -29,8 +30,15 @@ fn setup_game_play_timer(mut commands: Commands) {
     commands.insert_resource(GamePlayTimer::new());
 }
 
-fn tick_game_play_timer(mut game_play_timer: ResMut<GamePlayTimer>, time: Res<Time<Fixed>>) {
+fn tick_game_play_timer(
+    mut commands: Commands,
+    mut game_play_timer: ResMut<GamePlayTimer>,
+    time: Res<Time<Fixed>>,
+) {
     game_play_timer.tick(time.delta());
+    if game_play_timer.turned_overtime_this_tick() {
+        commands.trigger(EffectKind::Overtime);
+    }
 }
 
 pub struct GameStatePlugin;

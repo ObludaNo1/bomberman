@@ -1,3 +1,5 @@
+use std::f32;
+
 use bevy::prelude::*;
 
 use crate::{
@@ -32,7 +34,7 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
                         height: Val::Px(TOP_MENU_BAR_HEIGHT),
                         justify_content: JustifyContent::SpaceBetween,
                         align_items: AlignItems::Center,
-                        flex_direction: FlexDirection::Row,
+                        flex_direction: FlexDirection::RowReverse,
                         ..default()
                     },
                     BackgroundColor(Color::linear_rgb(0.1, 0.1, 0.1)),
@@ -42,12 +44,12 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
                         TopBarMenuText,
                         Text::new("Top Menu Bar"),
                         TextFont {
-                            font_size: 32.0,
+                            font_size: TOP_MENU_BAR_HEIGHT - 40.0,
                             ..default()
                         },
                         TextColor(Color::srgb(0.8, 0.8, 0.8)),
                         Node {
-                            margin: UiRect::all(Val::Px(10.0)),
+                            margin: UiRect::horizontal(Val::Px(30.0)),
                             ..default()
                         },
                     ));
@@ -56,11 +58,23 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
 }
 
 fn update_top_bar_text(
-    query: Query<&mut Text, With<TopBarMenuText>>,
+    query: Query<(&mut Text, &mut UiTransform, &mut TextColor), With<TopBarMenuText>>,
     game_play_timer: Res<GamePlayTimer>,
 ) {
-    for mut text in query {
+    for (mut text, mut transform, mut text_colour) in query {
         *text = Text::new(game_play_timer.text());
+        let oscillation =
+            (game_play_timer.overtime_duration().as_secs_f32() * 8.0 - f32::consts::PI * 0.5).sin()
+                * 0.5
+                + 0.5;
+        transform.scale = Vec2::splat(
+            (oscillation * 20.0 + TOP_MENU_BAR_HEIGHT - 40.0) / (TOP_MENU_BAR_HEIGHT - 40.0),
+        );
+        text_colour.0 = Color::srgb(
+            0.8 + oscillation * 0.2,
+            0.8 * (1.0 - oscillation),
+            0.8 * (1.0 - oscillation),
+        );
     }
 }
 

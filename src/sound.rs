@@ -14,6 +14,7 @@ pub enum EffectKind {
     EnemyDeath,
     PickUp,
     Explosion,
+    Overtime,
 }
 
 #[derive(Component, Clone)]
@@ -74,6 +75,7 @@ fn on_sound_trigger(
             return;
         }
         EffectKind::PickUp => audio_assets.pick_up.clone(),
+        EffectKind::Overtime => audio_assets.overtime.clone(),
     };
 
     commands.spawn((AudioPlayer::new(single_effect), default_playback_settings()));
