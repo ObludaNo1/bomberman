@@ -8,7 +8,7 @@ use crate::{
     map::WorldMap,
     position::WorldPosition,
     sound::EffectKind,
-    util::RenderScale,
+    util::EntityScale,
     world_entities::{ActorState, Character, Direction, MovementSpeed},
 };
 
@@ -48,7 +48,7 @@ pub fn victory_ending(
             &mut WorldPosition,
             &mut MovementDirection,
             &mut ActorState,
-            &mut RenderScale,
+            &mut EntityScale,
             &MovementSpeed,
         ),
         With<Character>,

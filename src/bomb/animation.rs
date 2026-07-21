@@ -16,7 +16,7 @@ use crate::{
     map::{BaseTile, WorldMap},
     position::TilePosition,
     rendering::MeshHandle,
-    util::RenderScale,
+    util::EntityScale,
     world_entities::{
         Bomb, DestructibleWall, Explosion, ExplosionNeedsSetup, ExplosionOrientation,
         ExplosionVariant,
@@ -98,7 +98,7 @@ pub fn spawn_explosion_visuals(
 }
 
 pub fn animate_bomb(
-    mut query: Query<(&mut RenderScale, &TilePosition), With<Bomb>>,
+    mut query: Query<(&mut EntityScale, &TilePosition), With<Bomb>>,
     map: Res<WorldMap>,
 ) {
     for (mut render_scale, pos) in query.iter_mut() {

@@ -14,3 +14,5 @@ pub const GHOSTS_SPAWNED: usize = 2;
 pub const GHOST_SPEED: f32 = 2.4;
 pub const HOODIES_SPAWNED: usize = 2;
 pub const HOODIE_SPEED: f32 = 1.8;
+
+pub const TOP_MENU_BAR_HEIGHT: f32 = 100.0;

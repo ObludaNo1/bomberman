@@ -17,7 +17,7 @@ use crate::{
     map::{BombTile, WorldMap},
     position::WorldPosition,
     rendering::MeshHandle,
-    util::RenderScale,
+    util::EntityScale,
     world_entities::{
         ActorState, Bomb, BombCount, BombRange, Character, GameplaySet, InGameEntity, MarkToDespawn,
     },
@@ -79,7 +79,7 @@ fn spawn_bomb_when_requested(
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(bomb_material.clone()),
                     Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
-                    RenderScale(1.0),
+                    EntityScale(1.0),
                 ));
             }
         }

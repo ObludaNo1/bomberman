@@ -7,16 +7,17 @@ use bevy::{
 
 use crate::{
     assets::TILESET_TILE_SIZE,
-    constants::{TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
+    constants::{TOP_MENU_BAR_HEIGHT, TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
     game_state::GameState,
     position::{TilePosition, WorldPosition},
+    world_entities::RenderedAreaWidth,
 };
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct CameraScale(pub f32);
+struct TileScale(pub f32);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct RenderScale(pub f32);
+pub struct EntityScale(pub f32);
 
 /// Returns the size of the window in pixels. Fullscreen and windowless fullscreen modes ignore
 /// window size and for those cases the actual window size is retrieved from used monitor.
@@ -37,7 +38,13 @@ pub fn get_window_size(window: &Window, monitor: Option<&Monitor>) -> (f32, f32)
     }
 }
 
-fn recompute_window_size(window: &Window, monitor: Option<&Monitor>) -> f32 {
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Scaling {
+    pub tile_scale: f32,
+    pub total_width_px: f32,
+}
+
+fn recompute_scaling(window: &Window, monitor: Option<&Monitor>) -> Scaling {
     let (target_width, target_height) = get_window_size(window, monitor);
 
     let tile_width = TILESET_TILE_SIZE.x as f32;
@@ -46,7 +53,13 @@ fn recompute_window_size(window: &Window, monitor: Option<&Monitor>) -> f32 {
     let map_width_px = TOTAL_MAP_WIDTH as f32 * tile_width;
     let map_height_px = TOTAL_MAP_HEIGHT as f32 * tile_height;
 
-    (target_width / map_width_px).min(target_height / map_height_px)
+    let tile_scale =
+        (target_width / map_width_px).min((target_height - TOP_MENU_BAR_HEIGHT) / map_height_px);
+
+    Scaling {
+        tile_scale,
+        total_width_px: map_width_px * tile_scale,
+    }
 }
 
 fn compute_scale(
@@ -59,9 +72,13 @@ fn compute_scale(
         return;
     };
 
-    let scale = recompute_window_size(window, monitor.single().ok());
+    let Scaling {
+        tile_scale,
+        total_width_px,
+    } = recompute_scaling(window, monitor.single().ok());
 
-    commands.insert_resource(CameraScale(scale));
+    commands.insert_resource(TileScale(tile_scale));
+    commands.insert_resource(RenderedAreaWidth(total_width_px));
 }
 
 fn recompute_scale_on_window_change(
@@ -83,22 +100,26 @@ fn recompute_scale_on_window_change(
         return;
     };
 
-    let scale = recompute_window_size(window, monitor.single().ok());
+    let Scaling {
+        tile_scale,
+        total_width_px,
+    } = recompute_scaling(window, monitor.single().ok());
 
-    commands.insert_resource(CameraScale(scale));
+    commands.insert_resource(TileScale(tile_scale));
+    commands.insert_resource(RenderedAreaWidth(total_width_px));
 }
 
 fn update_transformation(
     transform: &mut Transform,
     world_position: WorldPosition,
-    render_scale: Option<&RenderScale>,
+    render_scale: Option<&EntityScale>,
     scale: f32,
 ) {
     let render_scale = render_scale.map(|rs| rs.0).unwrap_or(1.0);
     *transform = Transform {
         translation: Vec3::new(
             world_position.x * TILESET_TILE_SIZE.x as f32 * scale,
-            world_position.y * TILESET_TILE_SIZE.y as f32 * scale,
+            world_position.y * TILESET_TILE_SIZE.y as f32 * scale - TOP_MENU_BAR_HEIGHT * 0.5,
             transform.translation.z,
         ),
         scale: Vec3::splat(scale * render_scale),
@@ -107,8 +128,8 @@ fn update_transformation(
 }
 
 fn update_world_transformations(
-    non_tile_entities: Query<(&mut Transform, &WorldPosition, Option<&RenderScale>)>,
-    scale: Res<CameraScale>,
+    non_tile_entities: Query<(&mut Transform, &WorldPosition, Option<&EntityScale>)>,
+    scale: Res<TileScale>,
 ) {
     let scale = scale.0;
     for (mut transform, world_position, render_scale) in non_tile_entities {
@@ -117,8 +138,8 @@ fn update_world_transformations(
 }
 
 fn update_tile_transformations(
-    tile_entities: Query<(&mut Transform, &TilePosition, Option<&RenderScale>)>,
-    scale: Res<CameraScale>,
+    tile_entities: Query<(&mut Transform, &TilePosition, Option<&EntityScale>)>,
+    scale: Res<TileScale>,
 ) {
     let scale = scale.0;
     for (mut transform, tile_position, render_scale) in tile_entities {
@@ -131,7 +152,9 @@ pub struct CameraScalePlugin;
 
 impl Plugin for CameraScalePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, compute_scale)
+        app.insert_resource(RenderedAreaWidth(1.0))
+            .insert_resource(TileScale(1.0))
+            .add_systems(PreStartup, compute_scale)
             .add_systems(PreUpdate, recompute_scale_on_window_change)
             .add_systems(
                 PostUpdate,

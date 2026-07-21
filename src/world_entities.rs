@@ -117,6 +117,9 @@ pub enum ActorState {
     Victory(Timer),
 }
 
+#[derive(Resource, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
+pub struct RenderedAreaWidth(pub f32);
+
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
 

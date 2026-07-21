@@ -11,6 +11,7 @@ mod map;
 mod position;
 mod rendering;
 mod sound;
+mod ui;
 mod util;
 mod world_entities;
 
@@ -57,6 +58,7 @@ fn main() {
         .add_plugins(game_state::GameStatePlugin)
         .add_plugins(death::DeathPlugin)
         .add_plugins(sound::SoundPlugin)
+        .add_plugins(ui::GameUiPlugin)
         .add_message::<SpawnEnemiesMessage>()
         .configure_sets(
             PreUpdate,
