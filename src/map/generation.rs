@@ -42,6 +42,12 @@ impl WorldMap {
         ]
     }
 
+    fn get_starting_area_protective_wall_indices() -> [usize; 2] {
+        let width = TOTAL_MAP_WIDTH;
+        let height = TOTAL_MAP_HEIGHT;
+        [width * (height - 2) + 3, width * (height - 4) + 1]
+    }
+
     pub fn new_random_default(rng_gen: &mut impl Rng) -> Self {
         let height = TOTAL_MAP_HEIGHT;
         let width = TOTAL_MAP_WIDTH;
@@ -109,6 +115,9 @@ impl WorldMap {
             .take(wall_count);
 
         for index in empty_tiles_indices.iter().copied().take(wall_count) {
+            tiles.index_mut(index).base_tile = BaseTileBuilder::BasicWall;
+        }
+        for index in Self::get_starting_area_protective_wall_indices() {
             tiles.index_mut(index).base_tile = BaseTileBuilder::BasicWall;
         }
         for (index, special) in empty_tiles_indices
