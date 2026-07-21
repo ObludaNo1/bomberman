@@ -188,7 +188,7 @@ impl Plugin for EnemyPlugin {
             .add_systems(Startup, prepare_enemy_material)
             .add_systems(
                 OnEnter(GameState::Playing),
-                setup_spawn_enemies.in_set(SpawnSystemSet::SpawnEnemies),
+                setup_spawn_enemies.in_set(SpawnSystemSet::SpawnUnits),
             )
             .add_observer(on_enemy_speed_up)
             .add_systems(

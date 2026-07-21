@@ -77,6 +77,13 @@ impl WorldMap {
         })
     }
 
+    pub fn get_player_spawning_location() -> TilePosition {
+        TilePosition(UVec2 {
+            x: 1,
+            y: (TOTAL_MAP_HEIGHT - 2) as u32,
+        })
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (TilePosition, &MapTile)> {
         self.tiles
             .iter()

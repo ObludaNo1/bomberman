@@ -84,7 +84,7 @@ fn main() {
         )
         .configure_sets(
             OnEnter(GameState::Playing),
-            (SpawnSystemSet::CreateMap, SpawnSystemSet::SpawnEnemies).chain(),
+            (SpawnSystemSet::CreateMap, SpawnSystemSet::SpawnUnits).chain(),
         )
         .run();
 }

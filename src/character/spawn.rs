@@ -7,7 +7,7 @@ use crate::{
         material::ColouringMaterial,
     },
     character::animation::get_character_animation_frames,
-    position::WorldPosition,
+    map::WorldMap,
     rendering::MeshHandle,
     util::RenderScale,
     world_entities::{
@@ -33,13 +33,12 @@ pub fn spawn_character(
     };
     let character_material = material.add(character_material);
 
-    let spawn_position = Vec2::new(-8.0, 6.0);
     commands.spawn((
         Character,
         Killable,
         InGameEntity,
         ActorState::Alive,
-        WorldPosition(spawn_position),
+        WorldMap::get_player_spawning_location().to_world_position(),
         Mesh2d(mesh_handle.0.clone()),
         MeshMaterial2d(character_material),
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),

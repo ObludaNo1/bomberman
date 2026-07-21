@@ -144,5 +144,5 @@ pub enum GameplaySet {
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum SpawnSystemSet {
     CreateMap,
-    SpawnEnemies,
+    SpawnUnits,
 }
