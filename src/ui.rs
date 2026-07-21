@@ -3,8 +3,11 @@ use bevy::prelude::*;
 use crate::{
     constants::TOP_MENU_BAR_HEIGHT,
     game_state::GameState,
-    world_entities::{InGameEntity, RenderedAreaWidth},
+    world_entities::{GamePlayTimer, InGameEntity, RenderedAreaWidth},
 };
+
+#[derive(Component)]
+struct TopBarMenuText;
 
 fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaWidth>) {
     commands
@@ -36,12 +39,13 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
                 ))
                 .with_children(|parent| {
                     parent.spawn((
+                        TopBarMenuText,
                         Text::new("Top Menu Bar"),
                         TextFont {
                             font_size: 32.0,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.8, 0.7, 1.0)),
+                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
                         Node {
                             margin: UiRect::all(Val::Px(10.0)),
                             ..default()
@@ -51,10 +55,20 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
         });
 }
 
+fn update_top_bar_text(
+    query: Query<&mut Text, With<TopBarMenuText>>,
+    game_play_timer: Res<GamePlayTimer>,
+) {
+    for mut text in query {
+        *text = Text::new(game_play_timer.text());
+    }
+}
+
 pub struct GameUiPlugin;
 
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_top_menu);
+        app.add_systems(OnEnter(GameState::Playing), spawn_top_menu)
+            .add_systems(Update, update_top_bar_text);
     }
 }

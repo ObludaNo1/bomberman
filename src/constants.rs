@@ -1,5 +1,8 @@
 use std::time::Duration;
 
+pub const DEFAULT_GAMEPLAY_TIMER: Duration = Duration::from_secs(120);
+pub const GAMEPLAY_OVERTIME_TIMER: Duration = Duration::from_secs(30);
+
 pub const TOTAL_MAP_WIDTH: usize = 19;
 pub const TOTAL_MAP_HEIGHT: usize = 15;
 pub const WALL_DENSITY: f32 = 0.50;
@@ -14,5 +17,7 @@ pub const GHOSTS_SPAWNED: usize = 2;
 pub const GHOST_SPEED: f32 = 2.4;
 pub const HOODIES_SPAWNED: usize = 2;
 pub const HOODIE_SPEED: f32 = 1.8;
+
+pub const OVERTIME_PENALTY_SPEED_MULTIPLIER: f32 = 0.25;
 
 pub const TOP_MENU_BAR_HEIGHT: f32 = 100.0;

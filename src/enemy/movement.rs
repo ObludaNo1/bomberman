@@ -7,7 +7,9 @@ use crate::{
     enemy::{EnemyRngGen, PlayerChasingEnemy},
     map::WorldMap,
     position::{TilePosition, WorldPosition},
-    world_entities::{ActorState, Character, Direction, Enemy, MovementMultiplier, MovementSpeed},
+    world_entities::{
+        ActorState, Character, Direction, Enemy, GamePlayTimer, MovementMultiplier, MovementSpeed,
+    },
 };
 
 const CV_ROTATION_MATRIX: Mat2 = Mat2::from_cols_array(&[0.0, -1.0, 1.0, 0.0]);
@@ -184,16 +186,14 @@ fn move_enemy(
     position: &mut WorldPosition,
     animation: &mut MovementDirection,
     movement: &mut EnemyMovement,
-    speed: &MovementSpeed,
-    movement_multiplier: Option<&MovementMultiplier>,
+    speed: f32,
     world_map: &WorldMap,
     delta_secs: f32,
     enemy_rng_gen: &mut EnemyRngGen,
     pathfinding: bool,
     player_pos: Option<WorldPosition>,
 ) {
-    let mut step_distance =
-        speed.0 * delta_secs * movement_multiplier.map(|mm| mm.multiplier).unwrap_or(1.0);
+    let mut step_distance = speed * delta_secs;
     let desired_pos = movement.desired_position;
     let desired_tile = world_map.get_tile(desired_pos);
     if let Some(desired_tile) = desired_tile
@@ -268,6 +268,7 @@ pub fn move_enemies(
     collision_map: Res<WorldMap>,
     time: Res<Time<Fixed>>,
     mut enemy_rng_gen: ResMut<EnemyRngGen>,
+    game_play_timer: Res<GamePlayTimer>,
 ) {
     let delta_secs = time.delta_secs();
 
@@ -285,9 +286,12 @@ pub fn move_enemies(
     {
         if matches!(state, ActorState::Alive) {
             let pathfinding = chasing_player.is_some();
+            let speed = speed.0
+                * game_play_timer.enemy_speed_multiplier()
+                * movement_multiplier.map(|m| m.multiplier).unwrap_or(1.0);
             move_enemy(
-                &mut position, &mut animation_dir, &mut movement, speed, movement_multiplier,
-                &collision_map, delta_secs, &mut enemy_rng_gen, pathfinding, player_pos,
+                &mut position, &mut animation_dir, &mut movement, speed, &collision_map,
+                delta_secs, &mut enemy_rng_gen, pathfinding, player_pos,
             );
         }
     }

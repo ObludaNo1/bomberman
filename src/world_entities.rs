@@ -1,9 +1,10 @@
 mod bonuses;
+mod game_play_timer;
 
 use bevy::prelude::*;
 pub use bonuses::*;
 
-use crate::position::TilePosition;
+use crate::{position::TilePosition, world_entities::game_play_timer::GamePlayTimerInner};
 
 #[derive(Component)]
 pub struct Character;
@@ -117,20 +118,23 @@ pub enum ActorState {
     Victory(Timer),
 }
 
+#[derive(Resource, Debug, Clone, PartialEq)]
+pub struct GamePlayTimer(GamePlayTimerInner);
+
 #[derive(Resource, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
 pub struct RenderedAreaWidth(pub f32);
 
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
 
+#[derive(Resource)]
+pub struct AllEnemiesKilled;
+
 #[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct SpawnEnemiesMessage {
     pub tile: TilePosition,
     pub timer: Timer,
 }
-
-#[derive(Resource)]
-pub struct AllEnemiesKilled;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum GameplaySet {
