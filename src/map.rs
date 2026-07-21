@@ -16,7 +16,7 @@ use crate::{
         material::ColouringMaterial,
     },
     constants::{TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
-    game_state::GameState,
+    game_state::STARTS_PLAYING,
     map::explosion::{ExplosionResult, ExplosionVisual},
     position::TilePosition,
     rendering::MeshHandle,
@@ -353,10 +353,7 @@ pub struct Map;
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
         app.add_observer(on_all_enemies_killed)
-            .add_systems(
-                OnEnter(GameState::Playing),
-                setup_map.in_set(SpawnSystemSet::CreateMap),
-            )
+            .add_systems(STARTS_PLAYING, setup_map.in_set(SpawnSystemSet::CreateMap))
             .add_systems(
                 FixedUpdate,
                 process_map_in_tick.in_set(GameplaySet::MapTickUpdate),

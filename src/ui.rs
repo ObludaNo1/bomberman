@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     constants::TOP_MENU_BAR_HEIGHT,
-    game_state::GameState,
+    game_state::STARTS_PLAYING,
     world_entities::{GamePlayTimer, InGameEntity, RenderedAreaWidth},
 };
 
@@ -82,7 +82,7 @@ pub struct GameUiPlugin;
 
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_top_menu)
+        app.add_systems(STARTS_PLAYING, spawn_top_menu)
             .add_systems(Update, update_top_bar_text);
     }
 }

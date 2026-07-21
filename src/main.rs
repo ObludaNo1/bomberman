@@ -21,7 +21,7 @@ use bevy::{
 };
 
 use crate::{
-    game_state::GameState,
+    game_state::{GameState, STARTS_PLAYING},
     world_entities::{GameplaySet, SpawnEnemiesMessage, SpawnSystemSet},
 };
 
@@ -85,7 +85,7 @@ fn main() {
             GameplaySet::AnimationAndSound.run_if(in_state(GameState::Playing)),
         )
         .configure_sets(
-            OnEnter(GameState::Playing),
+            STARTS_PLAYING,
             (SpawnSystemSet::CreateMap, SpawnSystemSet::SpawnUnits).chain(),
         )
         .run();

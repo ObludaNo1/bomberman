@@ -23,7 +23,7 @@ use crate::{
         },
         movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
     },
-    game_state::GameState,
+    game_state::STARTS_PLAYING,
     map::WorldMap,
     position::TilePosition,
     rendering::MeshHandle,
@@ -187,7 +187,7 @@ impl Plugin for EnemyPlugin {
         app.insert_resource(EnemyRngGen(StdRng::seed_from_u64(ENEMY_RNG_SEED)))
             .add_systems(Startup, prepare_enemy_material)
             .add_systems(
-                OnEnter(GameState::Playing),
+                STARTS_PLAYING,
                 setup_spawn_enemies.in_set(SpawnSystemSet::SpawnUnits),
             )
             .add_observer(on_enemy_speed_up)

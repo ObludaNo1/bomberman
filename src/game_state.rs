@@ -1,4 +1,5 @@
 mod main_menu;
+mod pause_menu;
 mod winning_screen;
 
 use bevy::prelude::*;
@@ -9,6 +10,7 @@ use crate::{
             clear_in_game_entities, despawn_main_menu, handle_main_menu_buttons,
             handle_main_menu_hover, spawn_main_menu,
         },
+        pause_menu::{despawn_pause_menu, pause_on_esc, resume_on_esc, spawn_pause_menu},
         winning_screen::{
             despawn_winning_screen, handle_win_screen_buttons, handle_win_screen_hover,
             spawn_winning_screen,
@@ -23,8 +25,14 @@ pub enum GameState {
     #[default]
     MainMenu,
     Playing,
+    Pause,
     Win,
 }
+
+pub const STARTS_PLAYING: OnTransition<GameState> = OnTransition {
+    entered: GameState::Playing,
+    exited: GameState::MainMenu,
+};
 
 fn setup_game_play_timer(mut commands: Commands) {
     commands.insert_resource(GamePlayTimer::new());
@@ -57,11 +65,15 @@ impl Plugin for GameStatePlugin {
                 (handle_main_menu_buttons, handle_main_menu_hover)
                     .run_if(in_state(GameState::MainMenu)),
             )
-            .add_systems(OnEnter(GameState::Playing), setup_game_play_timer)
+            .add_systems(STARTS_PLAYING, setup_game_play_timer)
             .add_systems(
                 FixedUpdate,
                 tick_game_play_timer.run_if(in_state(GameState::Playing)),
             )
+            .add_systems(Update, pause_on_esc.run_if(in_state(GameState::Playing)))
+            .add_systems(OnEnter(GameState::Pause), spawn_pause_menu)
+            .add_systems(Update, resume_on_esc.run_if(in_state(GameState::Pause)))
+            .add_systems(OnExit(GameState::Pause), despawn_pause_menu)
             .add_systems(OnEnter(GameState::Win), spawn_winning_screen)
             .add_systems(OnExit(GameState::Win), despawn_winning_screen)
             .add_systems(
