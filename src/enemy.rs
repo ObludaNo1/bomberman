@@ -126,19 +126,38 @@ fn setup_spawn_enemies(
     }
 }
 
-fn spawn_enemies_on_message(
+#[derive(Component, Deref, DerefMut)]
+struct SpawnEnemiesTimer(Timer);
+
+fn process_spawn_enemies_messages(
     mut commands: Commands,
     mut spawn_event: MessageReader<SpawnEnemiesMessage>,
+) {
+    if !spawn_event.is_empty() {
+        for message in spawn_event.read() {
+            commands.spawn((message.tile, SpawnEnemiesTimer(message.timer.clone())));
+        }
+        spawn_event.clear();
+    }
+}
+
+fn spawn_delayed_enemies(
+    mut commands: Commands,
+    query: Query<(Entity, &TilePosition, &mut SpawnEnemiesTimer)>,
+    time: Res<Time<Fixed>>,
     mut material_assets: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
     enemy_material: Res<EnemyTilesetMaterial>,
 ) {
-    if !spawn_event.is_empty() {
-        for spawn_position in spawn_event.read() {
+    let delta = time.delta();
+    for (entity, position, mut timer) in query {
+        timer.tick(delta);
+        if timer.is_finished() {
+            commands.entity(entity).despawn();
             for enemy in [Enemy::Zombie, Enemy::Zombie, Enemy::Ghost, Enemy::Ghost] {
                 spawn_single_enemy(
                     enemy,
-                    spawn_position.0,
+                    *position,
                     &mut commands,
                     &mut material_assets,
                     mesh_handle.0.clone(),
@@ -146,7 +165,6 @@ fn spawn_enemies_on_message(
                 );
             }
         }
-        spawn_event.clear();
     }
 }
 
@@ -175,13 +193,15 @@ impl Plugin for EnemyPlugin {
             .add_observer(on_enemy_speed_up)
             .add_systems(
                 FixedUpdate,
-                (
-                    spawn_enemies_on_message,
-                    move_enemies,
-                    tick_enemy_temporal_bonuses,
-                )
+                (move_enemies, tick_enemy_temporal_bonuses)
                     .chain()
                     .in_set(GameplaySet::Movement),
+            )
+            .add_systems(
+                FixedUpdate,
+                (process_spawn_enemies_messages, spawn_delayed_enemies)
+                    .chain()
+                    .in_set(GameplaySet::EnemySpawning),
             )
             .add_systems(
                 Update,

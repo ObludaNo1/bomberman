@@ -65,6 +65,7 @@ fn main() {
         .configure_sets(
             FixedUpdate,
             (
+                GameplaySet::EnemySpawning,
                 GameplaySet::Movement,
                 GameplaySet::BombPlacement,
                 GameplaySet::MapTickUpdate,

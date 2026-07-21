@@ -120,8 +120,11 @@ pub enum ActorState {
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
 
-#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SpawnEnemiesMessage(pub TilePosition);
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
+pub struct SpawnEnemiesMessage {
+    pub tile: TilePosition,
+    pub timer: Timer,
+}
 
 #[derive(Resource)]
 pub struct AllEnemiesKilled;
@@ -132,6 +135,7 @@ pub enum GameplaySet {
     Movement,
     BombPlacement,
     MapTickUpdate,
+    EnemySpawning,
     DeathAndVictory,
     MapToVisualsSync,
     AnimationAndSound,

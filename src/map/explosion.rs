@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     constants::{BOMB_EXPLOSION_DURATION, TOTAL_MAP_WIDTH, WALL_BREAK_DURATION},
-    map::{ExplosionTile, WorldMap, map_tile::BaseTile},
+    map::{ExplosionTile, MapTile, WorldMap, map_tile::BaseTile},
     position::TilePosition,
-    world_entities::{ExplosionOrientation, ExplosionVariant},
+    world_entities::{BonusType, ExplosionOrientation, ExplosionVariant, SpawnEnemiesMessage},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,6 +19,21 @@ impl ExplosionVisual {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExplosionResult {
+    pub visuals: Vec<ExplosionVisual>,
+    pub punish_tiles: Vec<SpawnEnemiesMessage>,
+}
+
+impl ExplosionResult {
+    pub fn empty() -> Self {
+        Self {
+            visuals: Vec::new(),
+            punish_tiles: Vec::new(),
+        }
+    }
+}
+
 const INDICES_INCREMENTS: [(isize, ExplosionOrientation); 4] = [
     (-1, ExplosionOrientation::Left),
     (1, ExplosionOrientation::Right),
@@ -26,10 +41,26 @@ const INDICES_INCREMENTS: [(isize, ExplosionOrientation); 4] = [
     (TOTAL_MAP_WIDTH as isize, ExplosionOrientation::Up),
 ];
 
+fn remove_bonus(tile: &mut MapTile, index: usize, punish_tiles: &mut Vec<SpawnEnemiesMessage>) {
+    match tile.remove_bonus() {
+        Some(BonusType::Negative) | None => {}
+        Some(_) => punish_tiles.push(SpawnEnemiesMessage {
+            tile: WorldMap::index_to_tile_pos(index),
+            timer: Timer::new(BOMB_EXPLOSION_DURATION, TimerMode::Once),
+        }),
+    }
+    if tile.special().is_some_and(|t| t.is_exit()) {
+        punish_tiles.push(SpawnEnemiesMessage {
+            tile: WorldMap::index_to_tile_pos(index),
+            timer: Timer::new(BOMB_EXPLOSION_DURATION, TimerMode::Once),
+        });
+    }
+}
+
 impl WorldMap {
     /// Explodes all bombs on the map and returns a vector of explosion paths that can be used to
     /// spawn explosion entities.
-    pub fn explode_bombs(&mut self) -> Vec<ExplosionVisual> {
+    pub fn explode_bombs(&mut self) -> ExplosionResult {
         let mut exploding_bombs = self
             .tiles
             .iter()
@@ -43,12 +74,13 @@ impl WorldMap {
             .collect::<Vec<_>>();
 
         if exploding_bombs.is_empty() {
-            return Vec::new();
+            return ExplosionResult::empty();
         }
 
         let mut explosion_centers = Vec::new();
 
-        let mut new_visuals = Vec::new();
+        let mut visuals = Vec::new();
+        let mut punish_tiles = Vec::new();
 
         // Repeat the explosion process until there are no more bombs to explode.
         while !exploding_bombs.is_empty() {
@@ -61,12 +93,12 @@ impl WorldMap {
                     BOMB_EXPLOSION_DURATION,
                     TimerMode::Once,
                 )));
-                tile.remove_bonus();
+                remove_bonus(tile, i, &mut punish_tiles);
             }
 
             // Secondly traverse all explosions and search for all chain exploded bombs.
             while let Some((index, range)) = explosion_centers.pop() {
-                new_visuals.push(ExplosionVisual::new(
+                visuals.push(ExplosionVisual::new(
                     ExplosionVariant::Center,
                     Self::index_to_tile_pos(index),
                 ));
@@ -83,7 +115,7 @@ impl WorldMap {
                                 } else {
                                     ExplosionVariant::Straight(orientation)
                                 };
-                                new_visuals
+                                visuals
                                     .push(ExplosionVisual::new(path, Self::index_to_tile_pos(i)));
                                 if let Some(range) = tile
                                     .bomb_or_explosion()
@@ -101,14 +133,14 @@ impl WorldMap {
                                     BOMB_EXPLOSION_DURATION,
                                     TimerMode::Once,
                                 )));
-                                tile.remove_bonus();
+                                remove_bonus(tile, i, &mut punish_tiles);
                             }
                             // Indestructible walls completely stop the explosion propagation.
                             BaseTile::IndestructibleWall => break,
                             // Breaking walls are already in a process of being destroyed so they
                             // only stop the propagation.
                             BaseTile::BreakingWall(_) => {
-                                new_visuals.push(ExplosionVisual::new(
+                                visuals.push(ExplosionVisual::new(
                                     ExplosionVariant::End(orientation),
                                     Self::index_to_tile_pos(i),
                                 ));
@@ -116,7 +148,7 @@ impl WorldMap {
                             }
                             // Basic walls are destroyed by the explosion and stop the propagation.
                             BaseTile::BasicWall => {
-                                new_visuals.push(ExplosionVisual::new(
+                                visuals.push(ExplosionVisual::new(
                                     ExplosionVariant::End(orientation),
                                     Self::index_to_tile_pos(i),
                                 ));
@@ -129,6 +161,9 @@ impl WorldMap {
             }
         }
 
-        new_visuals
+        ExplosionResult {
+            visuals,
+            punish_tiles,
+        }
     }
 }

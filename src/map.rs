@@ -17,7 +17,7 @@ use crate::{
     },
     constants::{TOTAL_MAP_HEIGHT, TOTAL_MAP_WIDTH},
     game_state::GameState,
-    map::explosion::ExplosionVisual,
+    map::explosion::{ExplosionResult, ExplosionVisual},
     position::TilePosition,
     rendering::MeshHandle,
     sound::EffectKind,
@@ -299,16 +299,19 @@ fn process_map_in_tick(
 ) {
     map.process_tick(time.delta());
 
-    let new_visuals = map.explode_bombs();
-    for ExplosionVisual { variant, pos } in new_visuals {
+    let ExplosionResult {
+        visuals,
+        punish_tiles,
+    } = map.explode_bombs();
+    for ExplosionVisual { variant, pos } in visuals {
         commands.spawn((Explosion, variant, pos, ExplosionNeedsSetup));
         commands.trigger(EffectKind::Explosion);
     }
+    for message in punish_tiles {
+        spawn_event.write(message);
+    }
 
-    for (index, tile) in map.tiles.iter_mut().enumerate() {
-        if tile.punish_player_for_exploding_this_tile() {
-            spawn_event.write(SpawnEnemiesMessage(WorldMap::index_to_tile_pos(index)));
-        };
+    for tile in map.tiles.iter_mut() {
         tile.convert_expired_entities();
     }
 }
