@@ -2,7 +2,7 @@ use std::time::Duration;
 
 pub const TOTAL_MAP_WIDTH: usize = 19;
 pub const TOTAL_MAP_HEIGHT: usize = 15;
-pub const WALL_DENSITY: f32 = 0.60;
+pub const WALL_DENSITY: f32 = 0.50;
 
 pub const BOMB_DURATION: Duration = Duration::from_millis(4500);
 pub const BOMB_EXPLOSION_DURATION: Duration = Duration::from_millis(1000);
