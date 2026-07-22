@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-pub const DEFAULT_GAMEPLAY_TIMER: Duration = Duration::from_secs(120);
+pub const DEFAULT_GAMEPLAY_TIMER: Duration = Duration::from_mins(4);
 pub const GAMEPLAY_OVERTIME_TIMER: Duration = Duration::from_secs(30);
 
 pub const TOTAL_MAP_WIDTH: usize = 19;
