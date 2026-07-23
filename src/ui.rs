@@ -5,13 +5,17 @@ use bevy::prelude::*;
 use crate::{
     constants::TOP_MENU_BAR_HEIGHT,
     game_state::STARTS_PLAYING,
-    world_entities::{GamePlayTimer, InGameEntity, RenderedAreaWidth},
+    world_entities::{FontHandle, GamePlayTimer, InGameEntity, RenderedAreaWidth},
 };
 
 #[derive(Component)]
 struct TopBarMenuText;
 
-fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaWidth>) {
+fn spawn_top_menu(
+    mut commands: Commands,
+    rendered_area_width: Res<RenderedAreaWidth>,
+    font_handle: Res<FontHandle>,
+) {
     commands
         .spawn((
             InGameEntity,
@@ -42,9 +46,10 @@ fn spawn_top_menu(mut commands: Commands, rendered_area_width: Res<RenderedAreaW
                 .with_children(|parent| {
                     parent.spawn((
                         TopBarMenuText,
-                        Text::new("Top Menu Bar"),
+                        Text::new(""),
                         TextFont {
                             font_size: TOP_MENU_BAR_HEIGHT - 40.0,
+                            font: font_handle.0.clone(),
                             ..default()
                         },
                         TextColor(Color::srgb(0.8, 0.8, 0.8)),
@@ -82,7 +87,8 @@ pub struct GameUiPlugin;
 
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(STARTS_PLAYING, spawn_top_menu)
+        app.init_resource::<FontHandle>()
+            .add_systems(STARTS_PLAYING, spawn_top_menu)
             .add_systems(Update, update_top_bar_text);
     }
 }

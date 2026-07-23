@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game_state::GameState;
+use crate::{game_state::GameState, world_entities::FontHandle};
 
 #[derive(Component)]
 pub struct WinningMenuScreen;
@@ -8,7 +8,7 @@ pub struct WinningMenuScreen;
 #[derive(Component)]
 pub struct WinningMenuButton;
 
-pub fn spawn_winning_screen(mut commands: Commands) {
+pub fn spawn_winning_screen(mut commands: Commands, font_handle: Res<FontHandle>) {
     commands
         .spawn((
             WinningMenuScreen,
@@ -27,6 +27,7 @@ pub fn spawn_winning_screen(mut commands: Commands) {
                 Text::new("Victory!"),
                 TextFont {
                     font_size: 64.0,
+                    font: font_handle.0.clone(),
                     ..default()
                 },
                 TextColor(Color::srgb(0.8, 0.7, 1.0)),
@@ -55,6 +56,7 @@ pub fn spawn_winning_screen(mut commands: Commands) {
                         Text::new("Main Menu"),
                         TextFont {
                             font_size: 28.0,
+                            font: font_handle.0.clone(),
                             ..default()
                         },
                         TextColor(Color::WHITE),

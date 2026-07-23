@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{game_state::GameState, world_entities::InGameEntity};
+use crate::{
+    game_state::GameState,
+    world_entities::{FontHandle, InGameEntity},
+};
 
 #[derive(Component)]
 pub struct MainMenuScreen;
@@ -11,7 +14,7 @@ pub enum MainMenuButton {
     Quit,
 }
 
-pub fn spawn_main_menu(mut commands: Commands) {
+pub fn spawn_main_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
     commands
         .spawn((
             MainMenuScreen,
@@ -30,6 +33,7 @@ pub fn spawn_main_menu(mut commands: Commands) {
                 Text::new("Main Menu"),
                 TextFont {
                     font_size: 64.0,
+                    font: font_handle.0.clone(),
                     ..default()
                 },
                 TextColor(Color::srgb(0.8, 0.7, 1.0)),
@@ -64,6 +68,7 @@ pub fn spawn_main_menu(mut commands: Commands) {
                             Text::new(label),
                             TextFont {
                                 font_size: 28.0,
+                                font: font_handle.0.clone(),
                                 ..default()
                             },
                             TextColor(Color::WHITE),

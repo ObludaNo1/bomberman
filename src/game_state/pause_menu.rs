@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game_state::GameState;
+use crate::{game_state::GameState, world_entities::FontHandle};
 
 #[derive(Component)]
 pub struct PauseMenuScreen;
@@ -23,7 +23,7 @@ pub fn resume_on_esc(
     }
 }
 
-pub fn spawn_pause_menu(mut commands: Commands) {
+pub fn spawn_pause_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
     commands
         .spawn((
             PauseMenuScreen,
@@ -42,6 +42,7 @@ pub fn spawn_pause_menu(mut commands: Commands) {
                 Text::new("Paused"),
                 TextFont {
                     font_size: 64.0,
+                    font: font_handle.0.clone(),
                     ..default()
                 },
                 TextColor(Color::srgb(0.8, 0.7, 1.0)),
@@ -54,6 +55,7 @@ pub fn spawn_pause_menu(mut commands: Commands) {
                 Text::new("Press ESC to resume"),
                 TextFont {
                     font_size: 32.0,
+                    font: font_handle.0.clone(),
                     ..default()
                 },
                 TextColor(Color::srgb(0.8, 0.7, 1.0)),

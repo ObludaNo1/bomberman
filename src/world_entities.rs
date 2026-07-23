@@ -124,6 +124,16 @@ pub struct GamePlayTimer(GamePlayTimerInner);
 #[derive(Resource, Deref, DerefMut, Debug, Clone, Copy, PartialEq)]
 pub struct RenderedAreaWidth(pub f32);
 
+#[derive(Resource, Deref, DerefMut, Debug, Clone, PartialEq)]
+pub struct FontHandle(pub Handle<Font>);
+
+impl FromWorld for FontHandle {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+        Self(asset_server.load("fonts/VCR_OSD_MONO_1.001.ttf"))
+    }
+}
+
 #[derive(Event)]
 pub struct AllEnemiesKilledEvent;
 
