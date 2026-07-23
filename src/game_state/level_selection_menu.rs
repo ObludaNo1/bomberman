@@ -1,23 +1,25 @@
 use bevy::prelude::*;
 
 use crate::{
-    game_state::MenuState,
-    world_entities::{DespawnOnMainMenu, FontHandle},
+    game_state::{GameState, MenuState},
+    world_entities::FontHandle,
 };
 
 #[derive(Component)]
-pub struct MainMenuScreen;
+pub struct LevelSelectionScreen;
 
-#[derive(Component)]
-pub enum MainMenuButton {
-    Start,
-    Quit,
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LevelSelectionButton {
+    Back,
+    Rng,
 }
 
-pub fn spawn_main_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
+const BUTTONS: [(LevelSelectionButton, &str); 1] = [(LevelSelectionButton::Rng, "Random level")];
+
+pub fn spawn_level_selection_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
     commands
         .spawn((
-            MainMenuScreen,
+            LevelSelectionScreen,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
@@ -30,7 +32,7 @@ pub fn spawn_main_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
         ))
         .with_children(|parent| {
             parent.spawn((
-                Text::new("Main Menu"),
+                Text::new("Level Selection Menu"),
                 TextFont {
                     font_size: 64.0,
                     font: font_handle.0.clone(),
@@ -43,12 +45,7 @@ pub fn spawn_main_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
                 },
             ));
 
-            let buttons = [
-                (MainMenuButton::Start, "Start"),
-                (MainMenuButton::Quit, "Quit"),
-            ];
-
-            for (btn_type, label) in buttons {
+            for (btn_type, label) in BUTTONS {
                 parent
                     .spawn((
                         btn_type,
@@ -75,19 +72,48 @@ pub fn spawn_main_menu(mut commands: Commands, font_handle: Res<FontHandle>) {
                         ));
                     });
             }
+
+            parent
+                .spawn((
+                    LevelSelectionButton::Back,
+                    Button,
+                    Node {
+                        width: Val::Px(300.0),
+                        height: Val::Px(55.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::vertical(Val::Px(8.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.15, 0.15, 0.3, 0.9)),
+                ))
+                .with_children(|btn_parent| {
+                    btn_parent.spawn((
+                        Text::new("Back"),
+                        TextFont {
+                            font_size: 28.0,
+                            font: font_handle.0.clone(),
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
         });
 }
 
-pub fn despawn_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenuScreen>>) {
+pub fn despawn_level_selection_menu(
+    mut commands: Commands,
+    query: Query<Entity, With<LevelSelectionScreen>>,
+) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-pub fn handle_main_menu_buttons(
+pub fn handle_level_selection_buttons(
+    mut game_state: ResMut<NextState<GameState>>,
     mut menu_state: ResMut<NextState<MenuState>>,
-    interaction_query: Query<(&Interaction, &MainMenuButton), Changed<Interaction>>,
-    mut exit: MessageWriter<AppExit>,
+    interaction_query: Query<(&Interaction, &LevelSelectionButton), Changed<Interaction>>,
 ) {
     for (interaction, button) in interaction_query.iter() {
         if *interaction != Interaction::Pressed {
@@ -95,20 +121,20 @@ pub fn handle_main_menu_buttons(
         }
 
         match button {
-            MainMenuButton::Start => {
-                menu_state.set(MenuState::Levels);
+            LevelSelectionButton::Rng => {
+                game_state.set(GameState::Playing);
             }
-            MainMenuButton::Quit => {
-                exit.write(AppExit::Success);
+            LevelSelectionButton::Back => {
+                menu_state.set(MenuState::Main);
             }
         }
     }
 }
 
-pub fn handle_main_menu_hover(
+pub fn handle_level_selection_hover(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<MainMenuButton>),
+        (Changed<Interaction>, With<LevelSelectionButton>),
     >,
 ) {
     for (interaction, mut bg) in interaction_query.iter_mut() {
@@ -117,14 +143,5 @@ pub fn handle_main_menu_hover(
             Interaction::Pressed => BackgroundColor(Color::srgba(0.35, 0.35, 0.6, 0.9)),
             Interaction::None => BackgroundColor(Color::srgba(0.15, 0.15, 0.3, 0.9)),
         };
-    }
-}
-
-pub fn clear_in_game_entities(
-    mut commands: Commands,
-    query: Query<Entity, With<DespawnOnMainMenu>>,
-) {
-    for entity in query.iter() {
-        commands.entity(entity).despawn();
     }
 }

@@ -1,3 +1,4 @@
+mod level_selection_menu;
 mod main_menu;
 mod pause_menu;
 mod winning_screen;
@@ -6,6 +7,10 @@ use bevy::prelude::*;
 
 use crate::{
     game_state::{
+        level_selection_menu::{
+            despawn_level_selection_menu, handle_level_selection_buttons,
+            handle_level_selection_hover, spawn_level_selection_menu,
+        },
         main_menu::{
             clear_in_game_entities, despawn_main_menu, handle_main_menu_buttons,
             handle_main_menu_hover, spawn_main_menu,
@@ -17,7 +22,7 @@ use crate::{
         },
     },
     sound::EffectKind,
-    world_entities::GamePlayTimer,
+    world_entities::{FontHandle, GamePlayTimer},
 };
 
 #[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -25,6 +30,14 @@ pub enum GameState {
     #[default]
     MainMenu,
     Playing,
+}
+
+#[derive(SubStates, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[source(GameState = GameState::MainMenu)]
+pub enum MenuState {
+    #[default]
+    Main,
+    Levels,
 }
 
 #[derive(SubStates, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -57,16 +70,23 @@ impl Plugin for GameStatePlugin {
     fn build(&self, app: &mut App) {
         app.insert_state(GameState::MainMenu)
             .add_sub_state::<PlayingState>()
+            .add_sub_state::<MenuState>()
+            .init_resource::<FontHandle>()
             .insert_resource(GamePlayTimer::new())
-            .add_systems(
-                OnEnter(GameState::MainMenu),
-                (spawn_main_menu, clear_in_game_entities),
-            )
-            .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
+            .add_systems(OnEnter(GameState::MainMenu), clear_in_game_entities)
+            .add_systems(OnEnter(MenuState::Main), spawn_main_menu)
+            .add_systems(OnExit(MenuState::Main), despawn_main_menu)
             .add_systems(
                 Update,
                 (handle_main_menu_buttons, handle_main_menu_hover)
-                    .run_if(in_state(GameState::MainMenu)),
+                    .run_if(in_state(MenuState::Main)),
+            )
+            .add_systems(OnEnter(MenuState::Levels), spawn_level_selection_menu)
+            .add_systems(OnExit(MenuState::Levels), despawn_level_selection_menu)
+            .add_systems(
+                Update,
+                (handle_level_selection_buttons, handle_level_selection_hover)
+                    .run_if(in_state(MenuState::Levels)),
             )
             .add_systems(OnEnter(GameState::Playing), setup_game_play_timer)
             .add_systems(
