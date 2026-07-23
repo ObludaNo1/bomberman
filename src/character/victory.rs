@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    game_state::GameState,
+    game_state::PlayingState,
     map::WorldMap,
     position::WorldPosition,
     sound::EffectKind,
@@ -42,7 +42,7 @@ pub fn check_for_win(
 
 pub fn victory_ending(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<PlayingState>>,
     mut characters: Query<
         (
             &mut WorldPosition,
@@ -87,7 +87,7 @@ pub fn victory_ending(
             animation_dir.0 = Some(Direction::Up);
             render_scale.0 = 1.0 - victory_timer.fraction();
             if victory_timer.is_finished() {
-                next_state.set(GameState::Win);
+                next_state.set(PlayingState::Win);
             }
         }
     }

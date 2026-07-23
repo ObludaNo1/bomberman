@@ -21,7 +21,7 @@ use bevy::{
 };
 
 use crate::{
-    game_state::{GameState, STARTS_PLAYING},
+    game_state::{GameState, PlayingState, STARTS_PLAYING},
     world_entities::{GameplaySet, SpawnEnemiesMessage, SpawnSystemSet},
 };
 
@@ -74,11 +74,14 @@ fn main() {
                 GameplaySet::DeathAndVictory,
             )
                 .chain()
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayingState::Playing)),
         )
         .configure_sets(
             Update,
-            GameplaySet::MapToVisualsSync.run_if(in_state(GameState::Playing)),
+            GameplaySet::MapToVisualsSync
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayingState::Playing)),
         )
         .configure_sets(
             PostUpdate,

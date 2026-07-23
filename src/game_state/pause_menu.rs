@@ -1,25 +1,25 @@
 use bevy::prelude::*;
 
-use crate::{game_state::GameState, world_entities::FontHandle};
+use crate::{game_state::PlayingState, world_entities::FontHandle};
 
 #[derive(Component)]
 pub struct PauseMenuScreen;
 
 pub fn pause_on_esc(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<PlayingState>>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
-        next_state.set(GameState::Pause);
+        next_state.set(PlayingState::Pause);
     }
 }
 
 pub fn resume_on_esc(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<PlayingState>>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
-        next_state.set(GameState::Playing);
+        next_state.set(PlayingState::Playing);
     }
 }
 
