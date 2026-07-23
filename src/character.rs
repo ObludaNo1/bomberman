@@ -16,7 +16,7 @@ use crate::{
         spawn::spawn_character,
         victory::{check_for_win, victory_ending},
     },
-    game_state::STARTS_PLAYING,
+    game_state::GameState,
     world_entities::{AllEnemiesKilled, GameplaySet, SpawnSystemSet},
 };
 
@@ -32,7 +32,7 @@ impl Plugin for CharacterPlugin {
         app.init_resource::<ImageAssets>()
             .insert_resource(CharacterRng(StdRng::seed_from_u64(CHARACTER_RNG_SEED)))
             .add_systems(
-                STARTS_PLAYING,
+                OnEnter(GameState::Playing),
                 spawn_character.in_set(SpawnSystemSet::SpawnUnits),
             )
             .add_systems(

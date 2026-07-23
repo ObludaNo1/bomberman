@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     constants::TOP_MENU_BAR_HEIGHT,
-    game_state::STARTS_PLAYING,
-    world_entities::{FontHandle, GamePlayTimer, DespawnOnMainMenu, RenderedAreaWidth},
+    game_state::PlayingState,
+    world_entities::{DespawnOnMainMenu, FontHandle, GamePlayTimer, RenderedAreaWidth},
 };
 
 #[derive(Component)]
@@ -88,7 +88,7 @@ pub struct GameUiPlugin;
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FontHandle>()
-            .add_systems(STARTS_PLAYING, spawn_top_menu)
+            .add_systems(OnEnter(PlayingState::Playing), spawn_top_menu)
             .add_systems(Update, update_top_bar_text);
     }
 }

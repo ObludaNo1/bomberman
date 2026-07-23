@@ -27,22 +27,14 @@ pub enum GameState {
     Playing,
 }
 
-#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(SubStates, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[source(GameState = GameState::Playing)]
 pub enum PlayingState {
     #[default]
     Playing,
     Pause,
     Win,
 }
-
-fn reset_playing_state(mut playing_state: ResMut<NextState<PlayingState>>) {
-    playing_state.set(PlayingState::default());
-}
-
-pub const STARTS_PLAYING: OnTransition<GameState> = OnTransition {
-    entered: GameState::Playing,
-    exited: GameState::MainMenu,
-};
 
 fn setup_game_play_timer(mut commands: Commands) {
     commands.insert_resource(GamePlayTimer::new());
@@ -64,8 +56,7 @@ pub struct GameStatePlugin;
 impl Plugin for GameStatePlugin {
     fn build(&self, app: &mut App) {
         app.insert_state(GameState::MainMenu)
-            .insert_state(PlayingState::Playing)
-            .add_systems(OnEnter(GameState::MainMenu), reset_playing_state)
+            .add_sub_state::<PlayingState>()
             .insert_resource(GamePlayTimer::new())
             .add_systems(
                 OnEnter(GameState::MainMenu),
@@ -77,29 +68,14 @@ impl Plugin for GameStatePlugin {
                 (handle_main_menu_buttons, handle_main_menu_hover)
                     .run_if(in_state(GameState::MainMenu)),
             )
-            .add_systems(STARTS_PLAYING, setup_game_play_timer)
+            .add_systems(OnEnter(GameState::Playing), setup_game_play_timer)
             .add_systems(
                 FixedUpdate,
-                tick_game_play_timer
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayingState::Playing)),
+                tick_game_play_timer.run_if(in_state(PlayingState::Playing)),
             )
-            .add_systems(
-                Update,
-                pause_on_esc
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayingState::Playing)),
-            )
-            .add_systems(
-                OnEnter(PlayingState::Pause),
-                spawn_pause_menu.run_if(in_state(GameState::Playing)),
-            )
-            .add_systems(
-                Update,
-                resume_on_esc
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayingState::Pause)),
-            )
+            .add_systems(Update, pause_on_esc.run_if(in_state(PlayingState::Playing)))
+            .add_systems(OnEnter(PlayingState::Pause), spawn_pause_menu)
+            .add_systems(Update, resume_on_esc.run_if(in_state(PlayingState::Pause)))
             .add_systems(OnExit(PlayingState::Pause), despawn_pause_menu)
             .add_systems(OnEnter(PlayingState::Win), spawn_winning_screen)
             .add_systems(OnExit(PlayingState::Win), despawn_winning_screen)

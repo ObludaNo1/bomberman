@@ -23,13 +23,13 @@ use crate::{
         },
         movement::{EnemyMovement, move_enemies, tick_enemy_temporal_bonuses},
     },
-    game_state::STARTS_PLAYING,
+    game_state::GameState,
     map::WorldMap,
     position::TilePosition,
     rendering::MeshHandle,
     world_entities::{
-        ActorState, Enemy, GameplaySet, DespawnOnMainMenu, Killable, MovementMultiplier, MovementSpeed,
-        SpawnEnemiesMessage, SpawnSystemSet, SpeedUpEnemies,
+        ActorState, DespawnOnMainMenu, Enemy, GameplaySet, Killable, MovementMultiplier,
+        MovementSpeed, SpawnEnemiesMessage, SpawnSystemSet, SpeedUpEnemies,
     },
 };
 
@@ -188,7 +188,7 @@ impl Plugin for EnemyPlugin {
             .insert_resource(EnemyRngGen(StdRng::seed_from_u64(ENEMY_RNG_SEED)))
             .add_systems(Startup, prepare_enemy_material)
             .add_systems(
-                STARTS_PLAYING,
+                OnEnter(GameState::Playing),
                 setup_spawn_enemies.in_set(SpawnSystemSet::SpawnUnits),
             )
             .add_observer(on_enemy_speed_up)
