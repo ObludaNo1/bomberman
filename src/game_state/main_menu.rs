@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     game_state::GameState,
-    world_entities::{FontHandle, InGameEntity},
+    world_entities::{DespawnOnMainMenu, FontHandle},
 };
 
 #[derive(Component)]
@@ -120,7 +120,10 @@ pub fn handle_main_menu_hover(
     }
 }
 
-pub fn clear_in_game_entities(mut commands: Commands, query: Query<Entity, With<InGameEntity>>) {
+pub fn clear_in_game_entities(
+    mut commands: Commands,
+    query: Query<Entity, With<DespawnOnMainMenu>>,
+) {
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }

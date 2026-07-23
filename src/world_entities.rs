@@ -84,7 +84,7 @@ pub enum ExplosionVariant {
 pub struct Bonus;
 
 #[derive(Component)]
-pub struct InGameEntity;
+pub struct DespawnOnMainMenu;
 
 #[derive(Component)]
 pub struct Killable;

@@ -19,7 +19,8 @@ use crate::{
     rendering::MeshHandle,
     util::EntityScale,
     world_entities::{
-        ActorState, Bomb, BombCount, BombRange, Character, GameplaySet, InGameEntity, MarkToDespawn,
+        ActorState, Bomb, BombCount, BombRange, Character, DespawnOnMainMenu, GameplaySet,
+        MarkToDespawn,
     },
 };
 
@@ -74,7 +75,7 @@ fn spawn_bomb_when_requested(
                 bomb_count.current += 1;
                 commands.spawn((
                     Bomb,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     bomb_position,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(bomb_material.clone()),

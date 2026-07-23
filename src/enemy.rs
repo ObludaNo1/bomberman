@@ -28,7 +28,7 @@ use crate::{
     position::TilePosition,
     rendering::MeshHandle,
     world_entities::{
-        ActorState, Enemy, GameplaySet, InGameEntity, Killable, MovementMultiplier, MovementSpeed,
+        ActorState, Enemy, GameplaySet, DespawnOnMainMenu, Killable, MovementMultiplier, MovementSpeed,
         SpawnEnemiesMessage, SpawnSystemSet, SpeedUpEnemies,
     },
 };
@@ -82,7 +82,7 @@ fn spawn_single_enemy(
         .spawn((
             enemy,
             Killable,
-            InGameEntity,
+            DespawnOnMainMenu,
             ActorState::Alive,
             position.to_world_position(),
             Mesh2d(mesh_handle),

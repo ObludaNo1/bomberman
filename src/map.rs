@@ -23,8 +23,8 @@ use crate::{
     rendering::MeshHandle,
     sound::EffectKind,
     world_entities::{
-        AllEnemiesKilledEvent, Bomb, Bonus, BonusType, DestructibleWall, Explosion,
-        ExplosionNeedsSetup, GameplaySet, InGameEntity, MarkToDespawn, SpawnEnemiesMessage,
+        AllEnemiesKilledEvent, Bomb, Bonus, BonusType, DespawnOnMainMenu, DestructibleWall,
+        Explosion, ExplosionNeedsSetup, GameplaySet, MarkToDespawn, SpawnEnemiesMessage,
         SpawnSystemSet,
     },
 };
@@ -204,7 +204,7 @@ fn setup_map(
             BaseTile::Floor => {
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(floor_material.clone()),
                     position,
@@ -214,7 +214,7 @@ fn setup_map(
             BaseTile::IndestructibleWall => {
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(indestructible_wall_material.clone()),
                     position,
@@ -226,7 +226,7 @@ fn setup_map(
                 // floor remains.
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(floor_material.clone()),
                     position,
@@ -234,7 +234,7 @@ fn setup_map(
                 ));
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     DestructibleWall,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(material.add(wall_material.clone())),
@@ -249,7 +249,7 @@ fn setup_map(
                 // completeness
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     ClosedGateTile,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(material.add(closed_gate_material.clone())),
@@ -258,7 +258,7 @@ fn setup_map(
                 ));
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     Mesh2d(mesh_handle.0.clone()),
                     MeshMaterial2d(material.add(open_gate_material.clone())),
                     position,
@@ -271,7 +271,7 @@ fn setup_map(
                     .set_uv_rect(map_tileset::BONUSES_TILEMAP.sprite_uv_rect(map_power_up(*bonus)));
                 commands.spawn((
                     MapTileComponent,
-                    InGameEntity,
+                    DespawnOnMainMenu,
                     Bonus,
                     *bonus,
                     Mesh2d(mesh_handle.0.clone()),

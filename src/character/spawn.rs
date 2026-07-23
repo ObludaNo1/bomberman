@@ -12,7 +12,7 @@ use crate::{
     rendering::MeshHandle,
     util::EntityScale,
     world_entities::{
-        ActorState, BombCount, BombRange, Character, InGameEntity, Killable, MovementSpeed,
+        ActorState, BombCount, BombRange, Character, DespawnOnMainMenu, Killable, MovementSpeed,
     },
 };
 
@@ -37,7 +37,7 @@ pub fn spawn_character(
     commands.spawn((
         Character,
         Killable,
-        InGameEntity,
+        DespawnOnMainMenu,
         ActorState::Alive,
         WorldMap::get_player_spawning_location().to_world_position(),
         Mesh2d(mesh_handle.0.clone()),

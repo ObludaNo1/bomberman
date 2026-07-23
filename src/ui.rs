@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     constants::TOP_MENU_BAR_HEIGHT,
     game_state::STARTS_PLAYING,
-    world_entities::{FontHandle, GamePlayTimer, InGameEntity, RenderedAreaWidth},
+    world_entities::{FontHandle, GamePlayTimer, DespawnOnMainMenu, RenderedAreaWidth},
 };
 
 #[derive(Component)]
@@ -18,7 +18,7 @@ fn spawn_top_menu(
 ) {
     commands
         .spawn((
-            InGameEntity,
+            DespawnOnMainMenu,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(TOP_MENU_BAR_HEIGHT),
