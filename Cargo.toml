@@ -32,7 +32,12 @@ strip = "debuginfo"
 
 
 [dependencies]
-bevy = { version = "0.18.0", features = ["dynamic_linking", "gif", "wav"] }
+bevy = { version = "0.18.0", features = [
+    "dynamic_linking",
+    "gif",
+    "wav",
+    "debug",
+] }
 paste = "1.0.15"
 pathfinding = "4.15.0"
 rand = "0.10.2"
