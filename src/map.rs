@@ -12,6 +12,7 @@ use rand::{SeedableRng, rngs::StdRng};
 
 use crate::{
     assets::{
+        ImageAssets,
         map_tileset::{self, MapTilesetHandles, PowerUpTileType},
         material::ColouringMaterial,
     },
@@ -141,7 +142,7 @@ struct ClosedGateTile;
 
 fn setup_map(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
@@ -155,7 +156,7 @@ fn setup_map(
         basic: basic_tilemap_handles,
         non_standard: non_standard_tilemap_handles,
         bonuses: bonuses_tilemap_handles,
-    } = map_tileset::prepare_tilemap_material(&asset_server, &mut material);
+    } = map_tileset::prepare_tilemap_material(&image_assets, &mut material);
     let Some(floor_colouring_material) = material.get(&floor_tilemap_handles.0) else {
         return;
     };
@@ -352,7 +353,8 @@ pub struct Map;
 
 impl Plugin for Map {
     fn build(&self, app: &mut App) {
-        app.add_observer(on_all_enemies_killed)
+        app.init_resource::<ImageAssets>()
+            .add_observer(on_all_enemies_killed)
             .add_systems(STARTS_PLAYING, setup_map.in_set(SpawnSystemSet::CreateMap))
             .add_systems(
                 FixedUpdate,

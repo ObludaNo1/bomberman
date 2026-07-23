@@ -9,7 +9,7 @@ use rand::{SeedableRng, rngs::StdRng, seq::SliceRandom};
 use crate::{
     animation::{AnimationController, MovementDirection},
     assets::{
-        TilesetHandles,
+        ImageAssets, TilesetHandles,
         enemy_tileset::{self, EnemyTileType},
         material::ColouringMaterial,
     },
@@ -46,11 +46,11 @@ struct PlayerChasingEnemy;
 
 fn prepare_enemy_material(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
     mut material: ResMut<Assets<ColouringMaterial>>,
 ) {
     let enemy_tileset_material =
-        enemy_tileset::prepare_tilemap_material(&asset_server, &mut material);
+        enemy_tileset::prepare_tilemap_material(&image_assets, &mut material);
     commands.insert_resource(EnemyTilesetMaterial(enemy_tileset_material));
 }
 
@@ -184,7 +184,8 @@ pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(EnemyRngGen(StdRng::seed_from_u64(ENEMY_RNG_SEED)))
+        app.init_resource::<ImageAssets>()
+            .insert_resource(EnemyRngGen(StdRng::seed_from_u64(ENEMY_RNG_SEED)))
             .add_systems(Startup, prepare_enemy_material)
             .add_systems(
                 STARTS_PLAYING,

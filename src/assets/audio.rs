@@ -16,19 +16,22 @@ pub struct AudioAssets {
     pub overtime: Handle<AudioSource>,
 }
 
-pub fn load_audio_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(AudioAssets {
-        victory: asset_server.load(format!("{AUDIO_PATH}/Jingle_Achievement_00.wav")),
-        character_death: asset_server.load(format!("{AUDIO_PATH}/Hero_Death_00.wav")),
-        enemy_death: asset_server.load(format!("{AUDIO_PATH}/Shoot_00.wav")),
-        pick_up: asset_server.load(format!("{AUDIO_PATH}/Pickup_04.wav")),
-        explosions: (
-            asset_server.load(format!("{AUDIO_PATH}/Explosion_00.wav")),
-            // asset_server.load(format!("{AUDIO_PATH}/Explosion_01.wav")),
-            asset_server.load(format!("{AUDIO_PATH}/Explosion_02.wav")),
-            // asset_server.load(format!("{AUDIO_PATH}/Explosion_03.wav")),
-            asset_server.load(format!("{AUDIO_PATH}/Explosion_04.wav")),
-        ),
-        overtime: asset_server.load(format!("{AUDIO_PATH}/Pickup_02.wav")),
-    });
+impl FromWorld for AudioAssets {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+        AudioAssets {
+            victory: asset_server.load(format!("{AUDIO_PATH}/Jingle_Achievement_00.wav")),
+            character_death: asset_server.load(format!("{AUDIO_PATH}/Hero_Death_00.wav")),
+            enemy_death: asset_server.load(format!("{AUDIO_PATH}/Shoot_00.wav")),
+            pick_up: asset_server.load(format!("{AUDIO_PATH}/Pickup_04.wav")),
+            explosions: (
+                asset_server.load(format!("{AUDIO_PATH}/Explosion_00.wav")),
+                // asset_server.load(format!("{AUDIO_PATH}/Explosion_01.wav")),
+                asset_server.load(format!("{AUDIO_PATH}/Explosion_02.wav")),
+                // asset_server.load(format!("{AUDIO_PATH}/Explosion_03.wav")),
+                asset_server.load(format!("{AUDIO_PATH}/Explosion_04.wav")),
+            ),
+            overtime: asset_server.load(format!("{AUDIO_PATH}/Pickup_02.wav")),
+        }
+    }
 }

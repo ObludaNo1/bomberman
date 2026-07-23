@@ -4,7 +4,7 @@ mod animation;
 
 use crate::{
     assets::{
-        TilesetHandles, bomb_explosion_tileset,
+        ImageAssets, TilesetHandles, bomb_explosion_tileset,
         bomb_tileset::{self, BombTileType},
         material::{ColouringMaterial, ExplosionMaterial},
     },
@@ -107,19 +107,19 @@ struct BombAssets {
 
 fn prepare_bomb_assets(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
     mut colouring_material: ResMut<Assets<ColouringMaterial>>,
     mut explostion_material: ResMut<Assets<ExplosionMaterial>>,
 ) {
     let bomb_handles =
-        bomb_tileset::prepare_tilemap_material(&asset_server, &mut colouring_material);
+        bomb_tileset::prepare_tilemap_material(&image_assets, &mut colouring_material);
     let Some(bomb_colouring) = colouring_material.get_mut(&bomb_handles.0) else {
         return;
     };
     bomb_colouring.set_uv_rect(bomb_tileset::TILEMAP.sprite_uv_rect(BombTileType::Bomb));
 
     let bomb_explosion_handles =
-        bomb_explosion_tileset::prepare_tilemap_material(&asset_server, &mut explostion_material);
+        bomb_explosion_tileset::prepare_tilemap_material(&image_assets, &mut explostion_material);
     commands.insert_resource(BombAssets {
         bomb_handles,
         bomb_explosion_handles,
@@ -130,7 +130,8 @@ pub struct BombPlugin;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, prepare_bomb_assets)
+        app.init_resource::<ImageAssets>()
+            .add_systems(Startup, prepare_bomb_assets)
             .add_systems(
                 FixedUpdate,
                 (

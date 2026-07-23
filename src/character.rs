@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use rand::{SeedableRng, rngs::StdRng};
 
 use crate::{
+    assets::ImageAssets,
     character::{
         animation::animate_character,
         bonuses::{pick_up_bonuses, tick_temporal_bonuses},
@@ -28,7 +29,8 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(CharacterRng(StdRng::seed_from_u64(CHARACTER_RNG_SEED)))
+        app.init_resource::<ImageAssets>()
+            .insert_resource(CharacterRng(StdRng::seed_from_u64(CHARACTER_RNG_SEED)))
             .add_systems(
                 STARTS_PLAYING,
                 spawn_character.in_set(SpawnSystemSet::SpawnUnits),

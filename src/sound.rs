@@ -2,10 +2,7 @@ use std::time::Duration;
 
 use bevy::{audio::Volume, prelude::*};
 
-use crate::{
-    assets::audio::{AudioAssets, load_audio_assets},
-    world_entities::GameplaySet,
-};
+use crate::{assets::audio::AudioAssets, world_entities::GameplaySet};
 
 #[derive(Event, Clone, Copy)]
 pub enum EffectKind {
@@ -100,7 +97,7 @@ pub struct SoundPlugin;
 
 impl Plugin for SoundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_audio_assets)
+        app.init_resource::<AudioAssets>()
             .add_observer(on_sound_trigger)
             .add_systems(
                 Update,

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     animation::{AnimationController, MovementDirection},
     assets::{
+        ImageAssets,
         character_tileset::{self, CharacterTileType},
         material::ColouringMaterial,
     },
@@ -19,12 +20,12 @@ const CHARACTER_SPEED: f32 = 2.0;
 
 pub fn spawn_character(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
     mut material: ResMut<Assets<ColouringMaterial>>,
     mesh_handle: Res<MeshHandle>,
 ) {
     let character_tileset_material =
-        character_tileset::prepare_tilemap_material(&asset_server, &mut material);
+        character_tileset::prepare_tilemap_material(&image_assets, &mut material);
 
     // Clone the shared template so this character can mutate uv_min/uv_max/flip_x without affecting
     // other entities.

@@ -1,9 +1,7 @@
-use bevy::{image::ImageLoaderSettings, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
-    assets::{
-        CHARACTER_TEXTURE_PATH, TILESET_TILE_SIZE, TilesetHandles, material::ColouringMaterial,
-    },
+    assets::{ImageAssets, TILESET_TILE_SIZE, TilesetHandles, material::ColouringMaterial},
     tileset_enum,
 };
 
@@ -27,24 +25,15 @@ tileset_enum!(
 );
 
 pub fn prepare_tilemap_material(
-    asset_server: &AssetServer,
+    image_assets: &ImageAssets,
     material: &mut Assets<ColouringMaterial>,
 ) -> TilesetHandles<ColouringMaterial> {
-    let image = asset_server.load_with_settings::<Image, ImageLoaderSettings>(
-        CHARACTER_TEXTURE_PATH,
-        |settings| {
-            settings.is_srgb = false;
-        },
-    );
-
-    let material = material.add(ColouringMaterial::new(
-        image,
+    TilesetHandles(material.add(ColouringMaterial::new(
+        image_assets.character.clone(),
         TILEMAP.atlas_size,
         Color::srgba(0.0, 0.0, 0.0, 1.0),
         Color::srgba(0.3, 0.3, 0.3, 1.0),
         Color::srgba(0.6, 0.6, 0.6, 1.0),
         Color::srgba(1.0, 1.0, 1.0, 0.0),
-    ));
-
-    TilesetHandles(material)
+    )))
 }
