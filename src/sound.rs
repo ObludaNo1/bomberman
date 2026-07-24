@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{audio::Volume, prelude::*};
 
-use crate::{assets::audio::AudioAssets, world_entities::GameplaySet};
+use crate::{assets::audio::AudioAssets, game_state::GameState, world_entities::GameplaySet};
 
 #[derive(Event, Clone, Copy)]
 pub enum EffectKind {
@@ -93,6 +93,30 @@ fn play_delayed_effects(
     }
 }
 
+#[derive(Component)]
+struct PlayingMusic;
+
+fn play_music(
+    mut commands: Commands,
+    audio_assets: Res<AudioAssets>,
+    game_state: Res<State<GameState>>,
+    current_music: Query<Entity, With<PlayingMusic>>,
+) {
+    let music_handle = match **game_state {
+        GameState::MainMenu => audio_assets.menu_music.clone(),
+        GameState::Playing => audio_assets.game_music.clone(),
+    };
+
+    for entity in current_music {
+        commands.entity(entity).despawn();
+    }
+    commands.spawn((
+        PlayingMusic,
+        AudioPlayer::new(music_handle),
+        PlaybackSettings::LOOP.with_volume(Volume::Decibels(-18.0)),
+    ));
+}
+
 pub struct SoundPlugin;
 
 impl Plugin for SoundPlugin {
@@ -102,6 +126,8 @@ impl Plugin for SoundPlugin {
             .add_systems(
                 Update,
                 play_delayed_effects.in_set(GameplaySet::AnimationAndSound),
-            );
+            )
+            .add_systems(OnEnter(GameState::MainMenu), play_music)
+            .add_systems(OnEnter(GameState::Playing), play_music);
     }
 }
